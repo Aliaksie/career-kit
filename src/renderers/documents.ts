@@ -1,5 +1,6 @@
 import nunjucks from 'nunjucks';
 import type { Profile } from '../schema/profile.js';
+import type { AchievementOrder } from '../schema/polish.js';
 
 export type Claim = { text: string; sources: string[] };
 export type Document = { markdown: string; html: string; claims: Claim[] };
@@ -7,7 +8,7 @@ export type Document = { markdown: string; html: string; claims: Claim[] };
 export function markdownText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\\`*_{}[\]()#+.!|~>-]/g, '\\$&').replace(/[\r\n]+/g, ' ');
 }
-export function compose(p: Profile, github = false): Document {
+export function compose(p: Profile, github = false, orders: ReadonlyMap<string, AchievementOrder> = new Map()): Document {
   const claims: Claim[] = [];
   const lines: string[] = [];
   const blocks: { heading?: string; text?: string; bullet?: boolean; level?: number }[] = [];
@@ -31,7 +32,8 @@ export function compose(p: Profile, github = false): Document {
     heading(project.name, 3, [`project:${project.id}`]);
     statement(project.description, [`project:${project.id}`]);
     for (const a of p.achievements.filter(a => a.project === project.id)) {
-      statement(`${a.statement.problem} ${a.statement.action} ${a.statement.outcome}`, [`achievement:${a.id}`, `project:${project.id}`], true);
+      const parts = orders.get(a.id) === 'action-first' ? [a.statement.action, a.statement.problem, a.statement.outcome] : [a.statement.problem, a.statement.action, a.statement.outcome];
+      statement(parts.join(' '), [`achievement:${a.id}`, `project:${project.id}`], true);
     }
   }
   if (p.openSourceContributions.length) {

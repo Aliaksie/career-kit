@@ -18,13 +18,13 @@ const vocabulary: Record<string, string[]> = {
 function aliases(p: Profile): Map<string, Set<string>> {
   const result = new Map(Object.entries(vocabulary).map(([key, values]) => [key, new Set([key.replaceAll('-', ' '), ...values])]));
   for (const skill of p.skills) {
-    const key = normalizeTerm(skill.id);
+    const key = canonicalTerms(skill.name).at(-1)!;
     const values = result.get(key) ?? new Set<string>();
     values.add(skill.name.toLowerCase()); values.add(key.replaceAll('-', ' '));
     result.set(key, values);
   }
   for (const a of p.achievements) for (const term of [...a.roles, ...a.domains, ...a.tags]) {
-    const key = normalizeTerm(term);
+    const key = canonicalTerms(term).at(-1)!;
     const values = result.get(key) ?? new Set<string>();
     values.add(key.replaceAll('-', ' ')); values.add(key);
     result.set(key, values);
@@ -56,8 +56,8 @@ export function extractJob(text: string, profile: Profile, structured = false): 
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
-    if (/^(?:#+\s*)?(?:nice[- ]to[- ]have|preferred|optional|bonus)(?:\s+(?:skills|qualifications|requirements))?:?$/i.test(line)) sectionImportance = 'preferred';
-    else if (/^(?:#+\s*)?(?:required|requirements|must[- ]have|essential)(?:\s+(?:skills|qualifications|requirements))?:?$/i.test(line)) sectionImportance = 'required';
+    if (/^(?:#+\s*)?(?:nice[- ]to[- ]have|preferred|optional|bonus)(?:\s+(?:skills|qualifications|requirements))?:?$/i.test(line)) { sectionImportance = 'preferred'; continue; }
+    else if (/^(?:#+\s*)?(?:required|requirements|must[- ]have|essential)(?:\s+(?:skills|qualifications|requirements))?:?$/i.test(line)) { sectionImportance = 'required'; continue; }
     const importance = /\b(preferred|optional|nice[- ]to[- ]have|bonus)\b/i.test(line) ? 'preferred' : sectionImportance;
     let recognized = false;
     for (const [key, values] of dictionary) {

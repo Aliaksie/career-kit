@@ -8,6 +8,7 @@ it('extracts bounded skill names, aliases and preferred sections without Java/Ja
   const job = extractJob('Required: JavaScript and K8s\nRust is not required\nNo Java experience needed\n## Preferred\n- TypeScript', p);
   expect(job.requirements.map(r => r.terms[0])).toEqual(['javascript', 'kubernetes', 'typescript']);
   expect(job.requirements.at(-1)?.importance).toBe('preferred');
+  expect(extractJob('## Required\n- TypeScript\n## Preferred\n- Rust', p).unparsed).toEqual([]);
 });
 it('ranks only structured matching evidence, preserves gaps and respects role limits', async () => {
   const p = await example();
@@ -47,4 +48,13 @@ it('records unparsed requirement lines so heuristic extraction limits remain vis
   const p = await example();
   const result = extractJob('- TypeScript\n- Proficiency in a proprietary DSL', p);
   expect(result.unparsed).toEqual(['- Proficiency in a proprietary DSL']);
+});
+
+it('uses human skill names so opaque IDs do not duplicate technology requirements', async () => {
+  const p = await example();
+  p.skills[0].id = 'skill-c'; p.skills[0].name = 'C++';
+  p.achievements[0].skills = ['skill-c'];
+  const requirements = extractJob('C++ required', p).requirements;
+  expect(requirements).toHaveLength(1);
+  expect(requirements[0].terms).toEqual(['c++']);
 });
