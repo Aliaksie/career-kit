@@ -22,8 +22,25 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: node dist/src/cli/index.js validate --profile examples/software-engineer/profile.yaml
       - run: node dist/src/cli/index.js build --profile examples/software-engineer/profile.yaml --target generic
-      - run: node dist/src/cli/index.js explain generated/cv.md
+      - run: node dist/src/cli/index.js verify generated
+      - run: node dist/src/cli/index.js explain generated/cv.pdf
       - run: node dist/src/cli/index.js tailor --profile examples/software-engineer/profile.yaml --job examples/software-engineer/job.md --output generated/tailored
-      - run: node dist/src/cli/index.js explain generated/tailored/cv.md
+      - run: node dist/src/cli/index.js verify generated/tailored
+      - run: node dist/src/cli/index.js explain generated/tailored/cv.pdf
       - run: node dist/src/cli/index.js tailor --profile examples/software-engineer/profile.yaml --job examples/software-engineer/job.json --output generated/structured --no-pdf
-      - run: npm pack --dry-run
+      - run: node dist/src/cli/index.js verify generated/structured
+      - name: Validate and audit v2 fictional input
+        run: |
+          node dist/src/cli/index.js validate --profile examples/software-engineer/profile-v2.yaml
+          node dist/src/cli/index.js audit --profile examples/software-engineer/profile.yaml --artifact github --json
+          node dist/src/cli/index.js audit --profile examples/software-engineer/profile-v2.yaml --artifact github --json
+          node dist/src/cli/index.js audit --profile examples/software-engineer/profile-v2.yaml --artifact cv --json
+      - name: Verify v2 generic and tailored PDFs
+        run: |
+          node dist/src/cli/index.js build --profile examples/software-engineer/profile-v2.yaml --output generated/v2
+          node dist/src/cli/index.js verify generated/v2
+          node dist/src/cli/index.js explain generated/v2/cv.pdf
+          node dist/src/cli/index.js tailor --profile examples/software-engineer/profile-v2.yaml --job examples/software-engineer/job.md --output generated/v2-tailored
+          node dist/src/cli/index.js verify generated/v2-tailored
+          node dist/src/cli/index.js explain generated/v2-tailored/cv.pdf
+      - run: pnpm test:package

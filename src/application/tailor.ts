@@ -13,5 +13,5 @@ export async function tailor(profile: Profile, job: string, output: string, opti
   const orders = options.model ? await polish(result.profile, options.model) : undefined;
   if (options.model && result.profile.achievements.length) result.report.polishing = { ...options.model.identity, promptVersion: 'source-order-v1' };
   const document = compose(result.profile, false, orders);
-  await writeArtifacts(document, output, `job:${target}`, options.pdf ?? true, undefined, result.report);
+  await writeArtifacts(profile, document, output, `job:${target}`, options.pdf ?? true, undefined, result.report);
 }

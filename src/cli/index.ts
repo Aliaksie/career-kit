@@ -1,13 +1,32 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
+import { Command, CommanderError } from 'commander';
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { loadProfile } from '../application/profile.js';
 import { build, explain } from '../application/build.js';
 import { tailor } from '../application/tailor.js';
+import { auditFile, auditFailure } from '../application/audit.js';
+import type { Audit } from '../schema/audit.js';
+import { verifyBundle } from '../application/bundle.js';
+import { compilerIdentity } from '../application/metadata.js';
 import { OpenAIProvider } from '../llm/openai.js';
 
-const program = new Command().name('career').description('Compile evidence-grounded career profiles').version('0.1.0');
+const isAudit = process.argv[2] === 'audit';
+const auditJson = isAudit && process.argv.slice(3).includes('--json');
+function printAudit(result: Audit): void {
+  if (auditJson) console.log(JSON.stringify(result));
+  else if (result.ok) console.log(result.records.map(r => `${r.source}: ${r.decision} (${r.reason})`).join('\n'));
+  else console.error(result.errors.map(e => e.code).join('\n'));
+  if (!result.ok) process.exitCode = 1;
+}
+const program = new Command().name('career').description('Compile evidence-grounded career profiles').version((await compilerIdentity()).version);
+if (isAudit) program.exitOverride().configureOutput({ writeErr: () => {} });
+program.command('audit').description('Report source disclosure decisions without private values')
+  .option('-p, --profile <file>', 'profile file', 'profile.yaml')
+  .option('--artifact <artifact>', 'cv or github')
+  .option('--json', 'emit versioned redacted JSON')
+  .allowExcessArguments(false)
+  .action(async opts => { printAudit(await auditFile(opts.profile, opts.artifact)); });
 program.command('init').description('Create a fictional example profile without overwriting files').option('-p, --profile <file>', 'profile file', 'profile.yaml').action(async opts => {
   const example = new URL('../../../examples/software-engineer/profile.yaml', import.meta.url);
   // Compiled modules have one additional directory level.
@@ -44,6 +63,11 @@ program.command('tailor').description('Match a job to disclosed evidence and gen
     });
     console.log(`Built tailored CV and matching report in ${opts.output}`);
   });
+program.command('verify <directory>').description('Verify a complete manifest and every managed artifact').action(async path => { await verifyBundle(path); console.log('Bundle is valid'); });
 program.command('explain <artifact>').description('Show source references for an unchanged generated artifact').action(async path => { console.log(await explain(path)); });
 try { await program.parseAsync(); }
-catch (error) { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
+catch (error) {
+  if (isAudit) {
+    if (!(error instanceof CommanderError && error.exitCode === 0)) printAudit(auditFailure(error instanceof CommanderError ? 'INVALID_ARTIFACT' : 'INTERNAL_ERROR'));
+  } else { console.error(error instanceof Error ? error.message : String(error)); process.exitCode = 1; }
+}

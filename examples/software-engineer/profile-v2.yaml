@@ -9,6 +9,17 @@ person:
     cv: true
     github: true
     portfolio: true
+  contacts:
+    - id: work-email
+      type: email
+      value: alex@example.com
+      visibility: public
+      disclosure: { cv: true }
+    - id: work-phone
+      type: phone
+      value: '+12025550123'
+      visibility: public
+      disclosure: { cv: true }
 skills:
   - id: typescript
     name: TypeScript

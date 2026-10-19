@@ -1,6 +1,6 @@
 # Independent contact disclosure
 
-Status: proposed, 2026-10-19; current schema has no contacts.
+Status: accepted and implemented, 2026-10-19; optional schema-v2 contacts.
 
 Add optional schema-v2 `person.contacts` with type, value, visibility, explicit artifact permissions and optional globally unique ID. Omitted permissions deny access. Both person and contact must permit the artifact. For omitted IDs, use original array position (`contact-1`, etc.) before filtering and reject collisions; explicit IDs avoid identity changes on reorder.
 

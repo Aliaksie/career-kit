@@ -1,6 +1,6 @@
 # Retain employer-level chronology
 
-Status: proposed, 2026-10-19; recommends deferring a role hierarchy.
+Status: accepted, 2026-10-19; role hierarchy deferred.
 
 Existing experiences/projects express employer periods and overlapping assignments. The consumer evidence does not establish reliable promotion dates; differing project titles do not establish successive formal roles.
 

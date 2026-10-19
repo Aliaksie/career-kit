@@ -18,6 +18,7 @@ it('initializes, validates, builds and explains from another working directory',
     await run('validate');
     await expect(run('build', '--target', 'missing', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await run('build', '--no-pdf');
+    expect((await run('verify', 'generated')).stdout).toContain('Bundle is valid');
     expect((await run('explain', 'generated/cv.md')).stdout).toContain('achievement:reliable-processing');
     await writeFile(join(dir, 'job.md'), '- TypeScript required\n- Rust preferred');
     await run('tailor', '--job', 'job.md', '--no-pdf');

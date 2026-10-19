@@ -1,0 +1,113 @@
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { expect, it } from 'vitest';
+import { build } from '../src/application/build.js';
+import { publishBundle, verifyBundle } from '../src/application/bundle.js';
+import { compilerIdentity, sha256 } from '../src/application/metadata.js';
+import { loadProfile, profileDigest } from '../src/application/profile.js';
+import { tailor } from '../src/application/tailor.js';
+import { manifestSchema } from '../src/schema/manifest.js';
+
+async function fixture(run: (dir: string) => Promise<void>) {
+  const dir = await mkdtemp(join(tmpdir(), 'career-bundle-'));
+  try { await run(dir); } finally { await rm(dir, { recursive: true, force: true }); }
+}
+const example = () => loadProfile('examples/software-engineer/profile-v2.yaml');
+it('emits deterministic complete inventories with installed metadata and exact source digest', async () => fixture(async dir => {
+  const p = await example();
+  await build(p, 'generic', dir, false);
+  const m = await verifyBundle(dir);
+  expect(m.compiler).toEqual(await compilerIdentity());
+  expect(m.profileSchemaVersion).toBe(2);
+  expect(m.profileSha256).toBe(sha256(await readFile('examples/software-engineer/profile-v2.yaml')));
+  expect(m.artifacts.map(a => a.path)).toEqual(['cv.md', 'cv.html', 'github-readme.md']);
+  const first = await readFile(join(dir, 'manifest.json'), 'utf8');
+  await build(p, 'generic', dir, false);
+  expect(await readFile(join(dir, 'manifest.json'), 'utf8')).toBe(first);
+  p.person.headline = 'Updated headline';
+  expect(profileDigest(p)).toBe(sha256(JSON.stringify(p)));
+}));
+it('removes obsolete managed outputs across build kinds and preserves unrelated files', async () => fixture(async dir => {
+  const p = await example();
+  await writeFile(join(dir, 'notes.md'), 'User notes');
+  await writeFile(join(dir, 'cv.pdf'), '%PDF-obsolete');
+  await writeFile(join(dir, 'cv.pdf.claims.json'), '{}');
+  await build(p, 'generic', dir, false);
+  await verifyBundle(dir);
+  await tailor(p, 'TypeScript required', dir, { pdf: false });
+  const m = await verifyBundle(dir);
+  expect(m.kind).toBe('tailor'); expect(m.target).toBe('generic');
+  expect(m.report?.path).toBe('matching.json');
+  await expect(readFile(join(dir, 'github-readme.md'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await build(p, 'generic', dir, false);
+  await verifyBundle(dir);
+  await expect(readFile(join(dir, 'matching.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(await readFile(join(dir, 'notes.md'), 'utf8')).toBe('User notes');
+}));
+it('rejects tampered, missing, stale, symlinked and unsupported bundles', async () => fixture(async dir => {
+  const p = await example();
+  const reset = () => build(p, 'generic', dir, false);
+  await reset();
+  await writeFile(join(dir, 'cv.md'), 'tampered');
+  await expect(verifyBundle(dir)).rejects.toThrow('digest');
+  await reset();
+  await rm(join(dir, 'cv.html.claims.json'));
+  await expect(verifyBundle(dir)).rejects.toThrow();
+  await reset();
+  await writeFile(join(dir, 'cv.pdf'), 'stale');
+  await expect(verifyBundle(dir)).rejects.toThrow('Obsolete');
+  await reset();
+  await rm(join(dir, 'cv.md')); await symlink('cv.html', join(dir, 'cv.md'));
+  await expect(verifyBundle(dir)).rejects.toThrow();
+  await reset();
+  const m = await verifyBundle(dir);
+  await writeFile(join(dir, 'manifest.json'), JSON.stringify({ ...m, version: 9 }));
+  await expect(verifyBundle(dir)).rejects.toThrow();
+  expect(() => manifestSchema.parse({ ...m, artifacts: [m.artifacts[0], m.artifacts[0]] })).toThrow();
+  expect(() => manifestSchema.parse({ ...m, artifacts: [{ ...m.artifacts[0], path: '../cv.md' }, ...m.artifacts.slice(1)] })).toThrow();
+  expect(() => manifestSchema.parse({ ...m, artifacts: [{ ...m.artifacts[0], provenance: m.artifacts[1].provenance }, ...m.artifacts.slice(1)] })).toThrow();
+}));
+it('checks sidecar semantics and report copies even with refreshed inventory digests', async () => fixture(async dir => {
+  const p = await example();
+  await tailor(p, 'TypeScript required', dir, { pdf: false });
+  const m = await verifyBundle(dir);
+  const a = m.artifacts[0];
+  const sidecar = JSON.parse(await readFile(join(dir, a.provenance.path), 'utf8'));
+  sidecar.tailoring.unparsed.push('Different report');
+  const bytes = JSON.stringify(sidecar);
+  await writeFile(join(dir, a.provenance.path), bytes);
+  a.provenance.sha256 = sha256(bytes);
+  await writeFile(join(dir, 'manifest.json'), JSON.stringify(m));
+  await expect(verifyBundle(dir)).rejects.toThrow('metadata mismatch');
+  sidecar.tailoring.unparsed = []; sidecar.version = 9;
+  const unsupported = JSON.stringify(sidecar);
+  await writeFile(join(dir, a.provenance.path), unsupported); a.provenance.sha256 = sha256(unsupported);
+  await writeFile(join(dir, 'manifest.json'), JSON.stringify(m));
+  await expect(verifyBundle(dir)).rejects.toThrow();
+}));
+it('preserves completed output on staging/input failure and rejects competing locks', async () => fixture(async dir => {
+  const p = await example();
+  const output = join(dir, 'output');
+  await build(p, 'generic', output, false);
+  const first = await readFile(join(output, 'manifest.json'), 'utf8');
+  const m = await verifyBundle(output);
+  await expect(publishBundle(output, new Map([['cv.md', 'invalid stage']]), m)).rejects.toThrow();
+  expect(await readFile(join(output, 'manifest.json'), 'utf8')).toBe(first);
+  await expect(build(p, 'missing', output, false)).rejects.toThrow('Unknown target');
+  await mkdir(`${output}.career-lock`);
+  await expect(build(p, 'generic', output, false)).rejects.toMatchObject({ code: 'EEXIST' });
+  expect(await readFile(join(output, 'manifest.json'), 'utf8')).toBe(first);
+  await rm(`${output}.career-lock`, { recursive: true });
+  await verifyBundle(output);
+}));
+it('leaves no completion marker after a destination replacement failure', async () => fixture(async dir => {
+  const p = await example();
+  await build(p, 'generic', dir, false);
+  await rm(join(dir, 'cv.html')); await mkdir(join(dir, 'cv.html'));
+  await expect(build(p, 'generic', dir, false)).rejects.toThrow();
+  await expect(readFile(join(dir, 'manifest.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(verifyBundle(dir)).rejects.toThrow();
+  await rm(join(dir, 'cv.html'), { recursive: true });
+  await build(p, 'generic', dir, false); await verifyBundle(dir);
+}));

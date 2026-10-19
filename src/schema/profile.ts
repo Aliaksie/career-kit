@@ -13,6 +13,16 @@ export const targetSchema = z.strictObject({
   maxAchievements: z.number().int().positive().default(12),
   experience: z.strictObject({ maxBulletsPerRole: z.number().int().positive().default(5) }).default({ maxBulletsPerRole: 5 }),
 });
+const contactFields = {
+  id: id.optional(), visibility: fact.visibility, disclosure: disclosure.default({ cv: false, github: false, portfolio: false }),
+};
+const email = z.string().max(254).regex(/^[a-zA-Z0-9.!#$&'*+/=_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/, 'Expected an email address').refine(value => !value.startsWith('.') && !value.includes('..') && !value.includes('.@'), 'Expected an email address');
+const contact = z.discriminatedUnion('type', [
+  z.strictObject({ ...contactFields, type: z.literal('email'), value: email }),
+  z.strictObject({ ...contactFields, type: z.literal('phone'), value: z.string().regex(/^\+[1-9][0-9]{1,14}$/, 'Expected an E.164 phone number') }),
+  z.strictObject({ ...contactFields, type: z.literal('url'), value: httpsUrl }),
+]);
+const contacts = z.array(contact).transform(items => items.map((item, index) => ({ ...item, id: item.id ?? `contact-${index + 1}` })));
 const common = {
   person: z.strictObject({ ...fact, name: text, headline: text, summary: text.optional() }),
   skills: z.array(z.strictObject({ ...fact, name: text })),
@@ -35,6 +45,7 @@ export const profileSchema = z.discriminatedUnion('version', [
   z.strictObject({ ...common, version: z.literal(1), openSourceContributions: z.array(z.strictObject({ ...fact, project: id, description: text })).default([]) }),
   z.strictObject({
     ...common, version: z.literal(2),
+    person: common.person.extend({ contacts: contacts.optional() }),
     openSourceProjects: z.array(z.strictObject({ ...fact, name: text, repository: httpsUrl, relationship: z.enum(['upstream', 'own']), description: text.optional() })).default([]),
     openSourceContributions: z.array(contributionSchema).default([]),
   }),
