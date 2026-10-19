@@ -21,3 +21,9 @@ Decisions: one YAML file owns facts and targets; IDs are global; missing disclos
 - Direct review of the source and working tree found and corrected stale PDF retention during `--no-pdf` builds. No independent agent review was performed.
 
 Deliveries remain grouped into three commits on `feat/career-kit-compiler`. No branch has been pushed and no remote PR has been opened.
+
+## Local consumer verification — 2026-10-19
+
+With owner authorization, validated a separate local consumer profile without copying its data into this repository. All four configured targets built Markdown, HTML and GitHub artifacts successfully. Every artifact passed digest/provenance verification; every recorded source ID belonged to the artifact's disclosed entities and selected achievements. Outputs remain in the consumer repository's ignored generated directory. Private supporting evidence and contact files were not used as compiler inputs.
+
+Retried the cached Chromium after explicit owner authorization. Launch still fails at macOS Mach-port registration (`MachPortRendezvousServer: Permission denied`). This is an execution sandbox restriction, independent of task authorization. PDF verification remains blocked in this session; no browser configuration or security restrictions were changed.
