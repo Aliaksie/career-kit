@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Ship consumer docs and schema sources, reorganize guidance around compiler/privacy/artifact contracts, and include fictional CV-only contacts in the v2 example.
+
 - Add `audit --artifact cv|github [--json]` using the production disclosure decision function. Versioned reports contain IDs/reasons and fixed error codes without private values or source paths; person denial yields ordinary exclusions.
 
 - Build/tailor now publish manifest v1 with package/input identity, artifact inventory and digests. New `verify` checks complete bundles. Staged writes, exclusive output locks and last-written completion markers reject interrupted/stale output; existing unrelated files remain untouched.

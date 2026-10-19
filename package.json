@@ -13,8 +13,11 @@
   },
   "files": [
     "dist/src",
+    "src/schema",
+    "docs",
     "examples",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {
@@ -23,7 +26,8 @@
     "lint": "eslint .",
     "test": "npm run build && vitest run dist/tests",
     "career": "tsx src/cli/index.ts",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "test:package": "pnpm build && node scripts/check-package.mjs"
   },
   "dependencies": {
     "commander": "14.0.3",
