@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Planned Career Kit manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "compiler", "profileSchemaVersion", "profileSha256", "kind", "target", "artifacts"],
+  "properties": {
+    "version": {"const": 1},
+    "compiler": {
+      "type": "object", "additionalProperties": false, "required": ["name", "version"],
+      "properties": {"name": {"const": "career-kit"}, "version": {"type": "string", "minLength": 1}}
+    },
+    "profileSchemaVersion": {"enum": [1, 2]},
+    "profileSha256": {"$ref": "#/$defs/digest"},
+    "kind": {"enum": ["build", "tailor"]},
+    "target": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "artifacts": {
+      "type": "array", "minItems": 2, "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["path", "format", "sha256", "provenance"],
+        "properties": {
+          "path": {"enum": ["cv.md", "cv.html", "cv.pdf", "github-readme.md"]},
+          "format": {"enum": ["markdown", "html", "pdf"]},
+          "sha256": {"$ref": "#/$defs/digest"},
+          "provenance": {
+            "type": "object", "additionalProperties": false, "required": ["path", "version", "sha256"],
+            "properties": {
+              "path": {"enum": ["cv.md.claims.json", "cv.html.claims.json", "cv.pdf.claims.json", "github-readme.md.claims.json"]},
+              "version": {"const": 1}, "sha256": {"$ref": "#/$defs/digest"}
+            }
+          }
+        }
+      }
+    },
+    "report": {
+      "type": "object", "additionalProperties": false, "required": ["path", "sha256"],
+      "properties": {"path": {"const": "matching.json"}, "sha256": {"$ref": "#/$defs/digest"}}
+    }
+  },
+  "allOf": [{"if": {"properties": {"kind": {"const": "tailor"}}}, "then": {"required": ["report"]}, "else": {"not": {"required": ["report"]}}}],
+  "$defs": {"digest": {"type": "string", "pattern": "^[a-f0-9]{64}$"}}
+}

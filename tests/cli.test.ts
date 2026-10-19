@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { expect, it } from 'vitest';
 const exec = promisify(execFile);
 const cli = resolve('dist/src/cli/index.js');
+// This integration scenario starts many Node processes sequentially.
 it('initializes, validates, builds and explains from another working directory', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'career-cli-'));
   const run = (...args: string[]) => exec(process.execPath, [cli, ...args], { cwd: dir, env: { ...process.env, OPENAI_API_KEY: '' } });
@@ -32,4 +33,4 @@ it('initializes, validates, builds and explains from another working directory',
     expect(JSON.parse(await readFile(join(dir, 'generated/tailored/matching.json'), 'utf8')).extraction).toBe('structured');
     await expect(run('validate', '--profile', 'missing.yaml')).rejects.toMatchObject({ code: 1 });
   } finally { await rm(dir, { recursive: true, force: true }); }
-});
+}, 20_000);

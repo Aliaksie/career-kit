@@ -4,6 +4,8 @@ An open-source, evidence-grounded career profile compiler. Maintain career facts
 
 Requires Node.js 24+ and pnpm 10.34.5.
 
+Checkout documentation: [consumer contract](docs/consumer-contract.md), [artifact contract](docs/artifact-contract.md), [proposed domain decisions](docs/decisions/README.md), and [planned manifest/audit contract](docs/manifest-audit-contract.md). These describe current guarantees separately from proposed changes; `docs/` is not yet included in the package.
+
 ```sh
 pnpm install
 pnpm build

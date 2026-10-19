@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Planned Career Kit audit v1",
+  "type": "object", "additionalProperties": false,
+  "required": ["version", "ok", "records", "errors"],
+  "properties": {
+    "version": {"const": 1}, "ok": {"type": "boolean"}, "artifact": {"enum": ["cv", "github"]},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["source", "decision", "reason"],
+        "properties": {
+          "source": {"type": "string", "pattern": "^(person|skill|experience|project|achievement|education|certification|contribution|open-source-project|contact):[a-z0-9][a-z0-9-]*$"},
+          "decision": {"enum": ["included", "excluded"]},
+          "reason": {"enum": ["allowed", "private", "not-disclosed", "parent-excluded", "skill-excluded"]}
+        },
+        "allOf": [{"if": {"properties": {"decision": {"const": "included"}}}, "then": {"properties": {"reason": {"const": "allowed"}}}, "else": {"properties": {"reason": {"not": {"const": "allowed"}}}}}]
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["code"],
+        "properties": {
+          "code": {"enum": ["POLICY_VIOLATION", "INPUT_UNREADABLE", "INVALID_PROFILE", "UNSUPPORTED_PROFILE_VERSION", "INVALID_ARTIFACT", "INTERNAL_ERROR"]},
+          "field": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9]*(\\.[a-zA-Z][a-zA-Z0-9]*|\\[[0-9]+\\])*$"}
+        }
+      }
+    }
+  },
+  "allOf": [{"if": {"properties": {"ok": {"const": true}}}, "then": {"required": ["artifact"], "properties": {"errors": {"maxItems": 0}}}, "else": {"properties": {"errors": {"minItems": 1}}}}]
+}
