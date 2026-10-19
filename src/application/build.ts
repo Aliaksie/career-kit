@@ -1,22 +1,22 @@
-import { createHash } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
-import { disclose, select } from './profile.js';
+import { disclose, select, profileDigest } from './profile.js';
 import { compose, type Document } from '../renderers/documents.js';
 import type { Profile } from '../schema/profile.js';
 import type { Tailoring } from '../schema/job.js';
 
-const hash = (text: string | Buffer) => createHash('sha256').update(text).digest('hex');
+import { compilerIdentity, sha256 as hash } from './metadata.js';
+import { publishBundle } from './bundle.js';
+import type { Manifest } from '../schema/manifest.js';
 export async function build(p: Profile, targetName: string, output: string, pdf = true): Promise<void> {
   const target = p.targets.find(t => t.name === targetName);
   if (!target) throw new Error(`Unknown target: ${targetName}`);
   // Both disclosure checks precede filesystem effects.
   const cv = compose(select(disclose(p, 'cv'), target));
   const github = compose(select(disclose(p, 'github'), target), true);
-  await writeArtifacts(cv, output, targetName, pdf, github);
+  await writeArtifacts(p, cv, output, targetName, pdf, github);
 }
-export async function writeArtifacts(cv: Document, output: string, targetName: string, pdf: boolean, github?: Document, tailoring?: Tailoring): Promise<void> {
+export async function writeArtifacts(profile: Profile, cv: Document, output: string, targetName: string, pdf: boolean, github?: Document, tailoring?: Tailoring): Promise<void> {
   let pdfBytes: Buffer | undefined;
   if (pdf) {
     const browser = await chromium.launch();
@@ -31,21 +31,24 @@ export async function writeArtifacts(cv: Document, output: string, targetName: s
   const files: Record<string, string | Buffer> = { 'cv.md': cv.markdown, 'cv.html': cv.html };
   if (github) files['github-readme.md'] = github.markdown;
   if (pdfBytes) files['cv.pdf'] = pdfBytes;
-  await mkdir(output, { recursive: true });
-  if (tailoring) await writeFile(join(output, 'matching.json'), JSON.stringify(tailoring, null, 2) + '\n');
-  else await rm(join(output, 'matching.json'), { force: true });
-  if (!github) {
-    await rm(join(output, 'github-readme.md'), { force: true });
-    await rm(join(output, 'github-readme.md.claims.json'), { force: true });
-  }
-  if (!pdf) {
-    await rm(join(output, 'cv.pdf'), { force: true });
-    await rm(join(output, 'cv.pdf.claims.json'), { force: true });
+  const manifest: Manifest = {
+    version: 1, compiler: await compilerIdentity(), profileSchemaVersion: profile.version,
+    profileSha256: profileDigest(profile), kind: tailoring ? 'tailor' : 'build',
+    target: tailoring ? targetName.slice(4) : targetName, artifacts: [],
+  };
+  const bundle = new Map<string, string | Buffer>();
+  if (tailoring) {
+    const report = JSON.stringify(tailoring, null, 2) + '\n';
+    bundle.set('matching.json', report);
+    manifest.report = { path: 'matching.json', sha256: hash(report) };
   }
   for (const [name, contents] of Object.entries(files)) {
-    await writeFile(join(output, name), contents);
-    await writeFile(join(output, `${name}.claims.json`), JSON.stringify({ version: 1, target: targetName, sha256: hash(contents), claims: name.startsWith('cv.') ? cv.claims : github!.claims, ...(tailoring ? { tailoring } : {}) }, null, 2) + '\n');
+    const path = name as Manifest['artifacts'][number]['path'];
+    const provenance = JSON.stringify({ version: 1, target: targetName, sha256: hash(contents), claims: name.startsWith('cv.') ? cv.claims : github!.claims, ...(tailoring ? { tailoring } : {}) }, null, 2) + '\n';
+    bundle.set(path, contents); bundle.set(`${path}.claims.json`, provenance);
+    manifest.artifacts.push({ path, format: path.endsWith('.md') ? 'markdown' : path.endsWith('.html') ? 'html' : 'pdf', sha256: hash(contents), provenance: { path: `${path}.claims.json`, version: 1, sha256: hash(provenance) } });
   }
+  await publishBundle(output, bundle, manifest);
 }
 export async function explain(path: string): Promise<string> {
   const contents = await readFile(path);

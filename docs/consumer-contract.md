@@ -12,6 +12,7 @@ One YAML file contains facts and targets. Relative paths resolve from the caller
 | `validate` | `--profile profile.yaml`; checks schema, global IDs and references. |
 | `build` | `--profile profile.yaml --target generic --output generated`; CV and GitHub bundle. |
 | `tailor --job <file>` | Same profile/target defaults; `--output generated/tailored`; CV-only bundle. |
+| `verify <directory>` | Validates manifest v1, complete inventory, digests and sidecar/report semantics. |
 | `explain <artifact>` | Checks adjacent sidecar schema and document digest; prints claims/sources. |
 
 Build/tailor produce PDF unless `--no-pdf` is supplied. A case-insensitive `.json` job suffix selects structured requirements; other suffixes use keyword extraction. See the fictional [JSON job](../examples/software-engineer/job.json). Unknown requirements remain unmatched; heuristic extraction can miss constraints. `experience.maxBulletsPerRole` limits achievements per experience, or per project without an experience.

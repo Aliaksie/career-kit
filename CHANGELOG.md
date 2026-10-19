@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Build/tailor now publish manifest v1 with package/input identity, artifact inventory and digests. New `verify` checks complete bundles. Staged writes, exclusive output locks and last-written completion markers reject interrupted/stale output; existing unrelated files remain untouched.
+
 - Add optional v2 contacts with independent deny-by-default disclosure, stable IDs and validated email/phone/HTTPS links. No contact data is migrated automatically; contacts never enter provider requests.
 
 - Support profile schema v2 with independently disclosed open-source repositories and typed contributions, safe links, explicit status and stable contribution provenance. Generic and tailored output retain these records independently of career-project selection.

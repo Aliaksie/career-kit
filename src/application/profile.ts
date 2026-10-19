@@ -1,6 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
+import { sha256 } from './metadata.js';
 import { profileSchema, type Profile, type Artifact, type Target } from '../schema/profile.js';
+
+const sourceDigests = new WeakMap<object, { snapshot: string; digest: string }>();
+export function profileDigest(p: Profile): string {
+  const snapshot = JSON.stringify(p);
+  const source = sourceDigests.get(p);
+  return source?.snapshot === snapshot ? source.digest : sha256(snapshot);
+}
 
 export function validateProfile(input: unknown): Profile {
   const p = profileSchema.parse(input);
@@ -36,7 +44,10 @@ export function validateProfile(input: unknown): Profile {
   return p;
 }
 export async function loadProfile(path: string): Promise<Profile> {
-  return validateProfile(parse(await readFile(path, 'utf8')));
+  const bytes = await readFile(path);
+  const p = validateProfile(parse(bytes.toString('utf8')));
+  sourceDigests.set(p, { snapshot: JSON.stringify(p), digest: sha256(bytes) });
+  return p;
 }
 export function disclose(p: Profile, artifact: Artifact): Profile {
   const allowed = (e: { visibility: string; disclosure: Record<Artifact, boolean> }) => e.visibility !== 'private' && e.disclosure[artifact];

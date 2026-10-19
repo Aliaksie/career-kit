@@ -18,7 +18,7 @@ node dist/src/cli/index.js explain generated/cv.md
 
 `pnpm career` runs the source CLI during development. For a shell-level `career` command, run `npm link` after building, or install a packed release with `npm install -g ./career-kit-0.1.0.tgz` after `npm pack`.
 
-Build creates `generated/cv.md`, `cv.html`, `cv.pdf`, and `github-readme.md`, each with a `.claims.json` provenance sidecar. Text and HTML generation are deterministic for identical input; Chromium PDF metadata can vary. Use `--no-pdf` to generate text artifacts without installing Chromium. `explain` rejects a changed artifact based on its SHA-256 digest. Sidecars provide traceability, not cryptographic proof of authorship.
+Build creates a version-1 `generated/manifest.json` inventory plus `generated/cv.md`, `cv.html`, `cv.pdf`, and `github-readme.md`, each with a `.claims.json` provenance sidecar. Text and HTML generation are deterministic for identical input; Chromium PDF metadata can vary. Use `--no-pdf` to generate text artifacts without installing Chromium. `verify generated` checks a complete bundle against its manifest. `explain` rejects a changed artifact based on its SHA-256 digest. Sidecars provide traceability, not cryptographic proof of authorship.
 
 All profile commands accept `--profile <file>` (default `profile.yaml`). Build also accepts `--target <name>` and `--output <directory>`. `init` never overwrites an existing file. Validation failures return a nonzero exit status.
 
@@ -56,7 +56,7 @@ The [v2 fictional profile](examples/software-engineer/profile-v2.yaml) groups ty
 
 To migrate, retain the old profile revision/package pin, set `version: 2`, add independently disclosed repositories, and replace each contribution’s `project` with `openSourceProject`. Preserve contribution IDs and attribution; explicitly choose repository `relationship`, contribution `kind`, evidenced `status`, and required PR/issue URL. Keep any career project still referenced by achievements. Do not infer status or inherit permissions automatically. Validate and review generic/tailored output before using it; v1 inputs remain supported unchanged. `init` continues to create the v1 starter.
 
-The CLI supports `init`, `validate`, `build`, `tailor`, and `explain`. CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
+The CLI supports `init`, `validate`, `build`, `tailor`, `verify`, and `explain`. CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
 
 ## Tailor a CV
 
@@ -68,7 +68,7 @@ node dist/src/cli/index.js tailor \
 node dist/src/cli/index.js explain generated/tailored/cv.md
 ```
 
-Tailoring writes `cv.md`, `cv.html`, optional `cv.pdf`, provenance sidecars, and `matching.json`. It generates a CV bundle, not a GitHub README. Remove `--no-pdf` with Chromium installed. Avoid reusing an output directory containing manually maintained documents: managed artifacts are replaced, and a previous PDF/GitHub README is removed when it is outside the requested bundle.
+Tailoring writes a version-1 manifest, `cv.md`, `cv.html`, optional `cv.pdf`, provenance sidecars, and `matching.json`. It generates a CV bundle, not a GitHub README. Remove `--no-pdf` with Chromium installed. Avoid reusing an output directory containing manually maintained documents: managed artifacts are replaced, and a previous PDF/GitHub README is removed when it is outside the requested bundle.
 
 Markdown and plain-text jobs use deterministic keyword extraction from a common technology vocabulary and disclosed skill names, roles, domains and tags. Matching uses structured evidence metadata, not statements that happen to mention a job keyword. Required matches receive weight 2; preferred matches weight 1. Target priorities break score ties, then achievement IDs determine order. Target achievement and role limits still apply. Unrelated career projects, roles and skills are removed; v1 contributions follow their selected career projects, while v2 retains the independently disclosed open-source section; disclosed person information, education and certifications remain.
 
