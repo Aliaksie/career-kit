@@ -4,7 +4,7 @@ An open-source, evidence-grounded career profile compiler. Maintain career facts
 
 Requires Node.js 24+ and pnpm 10.34.5.
 
-See the [consumer contract](docs/consumer-contract.md), [artifact contract](docs/artifact-contract.md) and [domain proposals](docs/decisions/README.md) for integration details and design rationale.
+See the [consumer contract](docs/consumer-contract.md), [artifact contract](docs/artifact-contract.md) and [domain decisions](docs/decisions/README.md) for integration details and design rationale.
 
 ```sh
 pnpm install
@@ -24,11 +24,17 @@ All profile commands accept `--profile <file>` (default `profile.yaml`). Build a
 
 Edit the initialized profile with your own evidence. The bundled [example](examples/software-engineer/profile.yaml) is fictional. Keep personal profiles outside this repository; the root `profile.yaml` and generated directory are ignored.
 
-The versioned schema contains a person, skills, experiences, projects, achievements, education, certifications, open source contributions, and targets. IDs use lowercase letters, digits and hyphens and must be unique across entities. Projects may reference an experience; achievements reference a project and known skill IDs. Dates use `YYYY-MM`. Achievement statements contain `problem`, `action`, and `outcome`, rather than polished CV bullets. Unknown fields and broken references are rejected.
+Profile versions 1 and 2 contain a person, skills, experiences, projects, achievements, education, certifications, open-source contributions, and targets. Version 2 adds independent open-source repositories; version 1 retains project-linked contributions. IDs use lowercase letters, digits and hyphens and must be unique across entities. Projects may reference an experience; achievements reference a project and known skill IDs. Dates use `YYYY-MM`. Achievement statements contain `problem`, `action`, and `outcome`, rather than polished CV bullets. Unknown fields and broken references are rejected.
 
 Every entity requires `visibility` (`public`, `sanitized`, or `private`) and a `disclosure` mapping. Missing artifact flags default to false. Private entities are always excluded. `sanitized` means **you have already sanitized the supplied text**; the compiler does not anonymize it. Disclosure filtering runs before selection and rendering. A withheld experience excludes its projects and achievements; a withheld project excludes its achievements and contributions; a withheld skill excludes achievements referencing it. The person must be disclosed for both CV and GitHub to build the complete bundle.
 
 Targets contain a name, priorities (tag-to-weight mapping from 0 to 1), `maxAchievements`, and `experience.maxBulletsPerRole`. Ranking sums weights for unique skills, roles, domains and tags. Ties use achievement IDs; role limits apply across projects belonging to that experience. Selection controls achievements; other disclosed facts remain visible. Input order controls section order. Renderers escape source text, and PDF rendering blocks external resource requests.
+
+## Independent open-source work
+
+The [v2 fictional profile](examples/software-engineer/profile-v2.yaml) groups typed contributions under `openSourceProjects`, independently of career projects. Repository and contribution permissions both apply; parent exclusion suppresses children. Rendered status distinguishes merged work from open or closed-unmerged proposals. Disclosed repositories remain in tailored CVs without contributing to achievement matching or ranking. Links require HTTPS without credentials, query or fragment.
+
+To migrate, retain the old profile revision/package pin, set `version: 2`, add independently disclosed repositories, and replace each contribution’s `project` with `openSourceProject`. Preserve contribution IDs and attribution; explicitly choose repository `relationship`, contribution `kind`, evidenced `status`, and required PR/issue URL. Keep any career project still referenced by achievements. Do not infer status or inherit permissions automatically. Validate and review generic/tailored output before using it; v1 inputs remain supported unchanged. `init` continues to create the v1 starter.
 
 The CLI supports `init`, `validate`, `build`, `tailor`, and `explain`. CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
 
@@ -44,7 +50,7 @@ node dist/src/cli/index.js explain generated/tailored/cv.md
 
 Tailoring writes `cv.md`, `cv.html`, optional `cv.pdf`, provenance sidecars, and `matching.json`. It generates a CV bundle, not a GitHub README. Remove `--no-pdf` with Chromium installed. Avoid reusing an output directory containing manually maintained documents: managed artifacts are replaced, and a previous PDF/GitHub README is removed when it is outside the requested bundle.
 
-Markdown and plain-text jobs use deterministic keyword extraction from a common technology vocabulary and disclosed skill names, roles, domains and tags. Matching uses structured evidence metadata, not statements that happen to mention a job keyword. Required matches receive weight 2; preferred matches weight 1. Target priorities break score ties, then achievement IDs determine order. Target achievement and role limits still apply. Unrelated projects, roles, skills and contributions are removed; disclosed person information, education and certifications remain.
+Markdown and plain-text jobs use deterministic keyword extraction from a common technology vocabulary and disclosed skill names, roles, domains and tags. Matching uses structured evidence metadata, not statements that happen to mention a job keyword. Required matches receive weight 2; preferred matches weight 1. Target priorities break score ties, then achievement IDs determine order. Target achievement and role limits still apply. Unrelated career projects, roles and skills are removed; v1 contributions follow their selected career projects, while v2 retains the independently disclosed open-source section; disclosed person information, education and certifications remain.
 
 Keyword extraction is heuristic. It does not interpret proficiency, years of experience, complex negation, or every technology. Importance applies per line or required/preferred section. `unparsed` reports requirement-like lines with no recognized terms; a partly recognized line may still contain constraints the parser missed. Review coverage rather than treating it as proof of job suitability. If no keywords are recognized, the command asks for structured input.
 

@@ -5,7 +5,7 @@ import { profileSchema, type Profile, type Artifact, type Target } from '../sche
 export function validateProfile(input: unknown): Profile {
   const p = profileSchema.parse(input);
   const ids = new Set<string>();
-  for (const entity of [p.person, ...p.skills, ...p.experiences, ...p.projects, ...p.achievements, ...p.education, ...p.certifications, ...p.openSourceContributions]) {
+  for (const entity of [p.person, ...p.skills, ...p.experiences, ...p.projects, ...p.achievements, ...p.education, ...p.certifications, ...p.openSourceContributions, ...(p.version === 2 ? p.openSourceProjects : [])]) {
     if (ids.has(entity.id)) throw new Error(`Duplicate entity ID: ${entity.id}`);
     ids.add(entity.id);
   }
@@ -18,7 +18,16 @@ export function validateProfile(input: unknown): Profile {
     reference(achievement.project, p.projects, 'project');
     for (const skill of achievement.skills) reference(skill, p.skills, 'skill');
   }
-  for (const contribution of p.openSourceContributions) reference(contribution.project, p.projects, 'project');
+  if (p.version === 1) {
+    for (const contribution of p.openSourceContributions) reference(contribution.project, p.projects, 'project');
+  } else {
+    const repositories = new Set<string>();
+    for (const project of p.openSourceProjects) {
+      if (repositories.has(project.repository)) throw new Error(`Duplicate open-source repository: ${project.id}`);
+      repositories.add(project.repository);
+    }
+    for (const contribution of p.openSourceContributions) reference(contribution.openSourceProject, p.openSourceProjects, 'open-source project');
+  }
   const targets = new Set<string>();
   for (const target of p.targets) {
     if (targets.has(target.name)) throw new Error(`Duplicate target: ${target.name}`);
@@ -36,7 +45,10 @@ export function disclose(p: Profile, artifact: Artifact): Profile {
   const skills = p.skills.filter(allowed);
   const projects = p.projects.filter(e => allowed(e) && (!e.experience || experiences.some(x => x.id === e.experience)));
   const achievements = p.achievements.filter(e => allowed(e) && projects.some(x => x.id === e.project) && e.skills.every(s => skills.some(x => x.id === s)));
-  return { ...p, experiences, skills, projects, achievements, education: p.education.filter(allowed), certifications: p.certifications.filter(allowed), openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && projects.some(x => x.id === e.project)) };
+  const common = { experiences, skills, projects, achievements, education: p.education.filter(allowed), certifications: p.certifications.filter(allowed) };
+  if (p.version === 1) return { ...p, ...common, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && projects.some(x => x.id === e.project)) };
+  const openSourceProjects = p.openSourceProjects.filter(allowed);
+  return { ...p, ...common, openSourceProjects, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && openSourceProjects.some(x => x.id === e.openSourceProject)) };
 }
 export function select(p: Profile, target: Target, scoring?: (a: Profile['achievements'][number]) => number): Profile {
   const score = scoring ?? ((a: Profile['achievements'][number]) => [...new Set([...a.skills, ...a.roles, ...a.domains, ...a.tags])].reduce((sum, tag) => sum + (target.priorities[tag] ?? 0), 0));

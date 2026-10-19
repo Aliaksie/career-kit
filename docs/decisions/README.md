@@ -1,6 +1,6 @@
-# Domain proposals
+# Domain decisions
 
-These short records explain proposed changes and their trade-offs. They do not describe implemented schema guarantees.
+These records preserve design rationale. Each states whether it is implemented or proposed.
 
 - [Independent open-source repositories](001-independent-open-source.md)
 - [Independent contact disclosure](002-contact-disclosure.md)

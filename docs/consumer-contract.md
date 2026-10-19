@@ -4,7 +4,7 @@ Requires Node.js 24+. Pin an exact engine version and lockfile. Source developme
 
 ## Inputs and commands
 
-One YAML file contains facts and targets. Relative paths resolve from the caller’s working directory. No config discovery, split profiles or evidence/contact sidecar loading exists. Current profile and provenance versions are both 1; unknown versions and fields fail validation.
+One YAML file contains facts and targets. Relative paths resolve from the caller’s working directory. No config discovery, split profiles or evidence/contact sidecar loading exists. Supported profile versions are 1 and 2; provenance remains version 1; unknown versions and fields fail validation.
 
 | Command | Defaults and result |
 | --- | --- |

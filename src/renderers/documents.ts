@@ -11,10 +11,16 @@ export function markdownText(value: string): string {
 export function compose(p: Profile, github = false, orders: ReadonlyMap<string, AchievementOrder> = new Map()): Document {
   const claims: Claim[] = [];
   const lines: string[] = [];
-  const blocks: { heading?: string; text?: string; bullet?: boolean; level?: number }[] = [];
+  const blocks: { heading?: string; text?: string; bullet?: boolean; level?: number; href?: string }[] = [];
   const heading = (text: string, level = 2, sources?: string[]) => { if (sources) claims.push({ text, sources }); lines.push(`${'#'.repeat(level)} ${markdownText(text)}`, ''); blocks.push({ heading: text, level }); };
   const statement = (text: string, sources: string[], bullet = false) => {
     claims.push({ text, sources }); lines.push(`${bullet ? '- ' : ''}${markdownText(text)}`, ''); blocks.push({ text, bullet });
+  };
+  const link = (text: string, href: string, sources: string[]) => {
+    claims.push({ text: `${text} — ${href}`, sources });
+    const destination = href.replace(/[<>\\]/g, c => encodeURIComponent(c));
+    lines.push(`- [${markdownText(text)}](<${destination}>)`, '');
+    blocks.push({ text, href, bullet: true });
   };
   heading(p.person.name, 1, [`person:${p.person.id}`]);
   statement(p.person.headline, [`person:${p.person.id}`]);
@@ -36,9 +42,23 @@ export function compose(p: Profile, github = false, orders: ReadonlyMap<string, 
       statement(parts.join(' '), [`achievement:${a.id}`, `project:${project.id}`], true);
     }
   }
-  if (p.openSourceContributions.length) {
+  if (p.version === 1 && p.openSourceContributions.length) {
     heading('Open Source');
     for (const c of p.openSourceContributions) statement(c.description, [`contribution:${c.id}`, `project:${c.project}`], true);
+  } else if (p.version === 2 && p.openSourceProjects.length) {
+    heading('Open Source');
+    for (const project of p.openSourceProjects) {
+      const source = `open-source-project:${project.id}`;
+      heading(project.name, 3, [source]);
+      link(`${project.name} (${project.relationship})`, project.repository, [source]);
+      if (project.description) statement(project.description, [source]);
+      for (const c of p.openSourceContributions.filter(c => c.openSourceProject === project.id)) {
+        const text = `${c.kind} (${c.status}): ${c.description}`;
+        const sources = [`contribution:${c.id}`, source];
+        if (c.url) link(text, c.url, sources);
+        else statement(text, sources, true);
+      }
+    }
   }
   if (!github && p.education.length) {
     heading('Education');
@@ -49,6 +69,6 @@ export function compose(p: Profile, github = false, orders: ReadonlyMap<string, 
     for (const c of p.certifications) statement(`${c.name} — ${c.issuer}`, [`certification:${c.id}`], true);
   }
   const env = new nunjucks.Environment(undefined, { autoescape: true });
-  const html = env.renderString(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ title }}</title><style>body{font:11pt Arial,sans-serif;line-height:1.5;color:#17202a;max-width:760px;margin:36px auto}h1,h2,h3{break-after:avoid}p{break-inside:avoid}.bullet{margin-left:1em}@page{size:A4;margin:16mm}</style></head><body>{% for b in blocks %}{% if b.heading %}{% if b.level == 1 %}<h1>{{ b.heading }}</h1>{% elif b.level == 3 %}<h3>{{ b.heading }}</h3>{% else %}<h2>{{ b.heading }}</h2>{% endif %}{% else %}<p{% if b.bullet %} class="bullet"{% endif %}>{% if b.bullet %}• {% endif %}{{ b.text }}</p>{% endif %}{% endfor %}</body></html>`, { title: p.person.name, blocks });
+  const html = env.renderString(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ title }}</title><style>body{font:11pt Arial,sans-serif;line-height:1.5;color:#17202a;max-width:760px;margin:36px auto}h1,h2,h3{break-after:avoid}p{break-inside:avoid}.bullet{margin-left:1em}@page{size:A4;margin:16mm}</style></head><body>{% for b in blocks %}{% if b.heading %}{% if b.level == 1 %}<h1>{{ b.heading }}</h1>{% elif b.level == 3 %}<h3>{{ b.heading }}</h3>{% else %}<h2>{{ b.heading }}</h2>{% endif %}{% else %}<p{% if b.bullet %} class="bullet"{% endif %}>{% if b.bullet %}• {% endif %}{% if b.href %}<a href="{{ b.href }}">{{ b.text }}</a>{% else %}{{ b.text }}{% endif %}</p>{% endif %}{% endfor %}</body></html>`, { title: p.person.name, blocks });
   return { markdown: lines.join('\n'), html, claims };
 }

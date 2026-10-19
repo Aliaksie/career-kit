@@ -27,7 +27,9 @@ export function matchJob(profile: Profile, job: string, targetName: string, stru
   const projects = selected.projects.filter(p => projectIds.has(p.id));
   const experiences = selected.experiences.filter(e => projects.some(p => p.experience === e.id));
   const skills = selected.skills.filter(s => selected.achievements.some(a => a.skills.includes(s.id)));
-  const result = { ...selected, projects, experiences, skills, openSourceContributions: selected.openSourceContributions.filter(c => projectIds.has(c.project)) };
+  const result: Profile = selected.version === 1
+    ? { ...selected, projects, experiences, skills, openSourceContributions: selected.openSourceContributions.filter(c => projectIds.has(c.project)) }
+    : { ...selected, projects, experiences, skills };
   const report: Tailoring = {
     jobSha256: createHash('sha256').update(job).digest('hex'), extraction: extracted.extraction, unparsed: extracted.unparsed,
     coverage: extracted.requirements.map(requirement => ({ requirement,
