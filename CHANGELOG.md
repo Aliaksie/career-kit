@@ -2,9 +2,10 @@
 
 ## Unreleased
 
-## 0.2.0 — release candidate
+## 0.2.0
 
-This version is prepared for release; this heading does not indicate publication.
+- Publish tested npm-format packages through a tag-triggered GitHub Actions release workflow, including checksums and npm integrity metadata. Ordinary PRs and main pushes run checks only.
+
 Profile schema v1 remains supported. Schema v2 migration is explicit; see
 [schema guidance](docs/schema.md). Build directories now reserve `manifest.json`;
 move any manually maintained file with that name before upgrading.

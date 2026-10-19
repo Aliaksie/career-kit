@@ -8,6 +8,10 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const reuseDependencies = process.argv.includes('--reuse-dependencies');
+const destinationIndex = process.argv.indexOf('--pack-destination');
+if (destinationIndex !== -1 && !process.argv[destinationIndex + 1]) throw new Error('--pack-destination needs a directory');
+if (reuseDependencies && destinationIndex !== -1) throw new Error('Retaining a release package requires clean-install acceptance');
+const packDestination = destinationIndex === -1 ? undefined : resolve(process.argv[destinationIndex + 1]);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temp = await mkdtemp(join(tmpdir(), 'career-package-'));
 const run = (command, args, cwd) => execFileSync(command, args, {
@@ -66,6 +70,11 @@ try {
       career('tailor', '--profile', profile, '--job', join(installed, 'examples', 'software-engineer', job), '--output', output, '--no-pdf');
       career('verify', output); career('explain', `${output}/cv.html`);
     }
+  }
+  if (packDestination) {
+    await mkdir(packDestination, { recursive: true });
+    await cp(join(temp, packed.filename), join(packDestination, packed.filename), { errorOnExist: true, force: false });
+    await writeFile(join(packDestination, 'pack.json'), `${JSON.stringify(packed, null, 2)}\n`);
   }
   console.log(`Packed package ${metadata.name}@${metadata.version}: ${reuseDependencies ? "unpacked runtime smoke with reused dependencies" : "clean isolated install"}, commands, contracts and links passed (${packed.entryCount} files).`);
 } finally { await rm(temp, { recursive: true, force: true }); }
