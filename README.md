@@ -1,6 +1,6 @@
 # Career Kit
 
-An open-source, evidence-grounded career profile compiler. Maintain career facts in YAML and generate a CV and GitHub profile from the same evidence. v0.1 works entirely offline after installation; no LLM or API key is required.
+An open-source, evidence-grounded career profile compiler. Maintain career facts in YAML and generate a CV and GitHub profile from the same evidence. Compilation and deterministic job tailoring work offline after installation; no API key is required. OpenAI clause ordering is optional.
 
 Requires Node.js 24+ and pnpm 10.34.5.
 
@@ -28,10 +28,54 @@ Every entity requires `visibility` (`public`, `sanitized`, or `private`) and a `
 
 Targets contain a name, priorities (tag-to-weight mapping from 0 to 1), `maxAchievements`, and `experience.maxBulletsPerRole`. Ranking sums weights for unique skills, roles, domains and tags. Ties use achievement IDs; role limits apply across projects belonging to that experience. Selection controls achievements; other disclosed facts remain visible. Input order controls section order. Renderers escape source text, and PDF rendering blocks external resource requests.
 
-The CLI supports `init`, `validate`, `build`, and `explain`. Intelligent job tailoring and OpenAI integration belong to v0.2; CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
+The CLI supports `init`, `validate`, `build`, `tailor`, and `explain`. CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
+
+## Tailor a CV
+
+```sh
+node dist/src/cli/index.js tailor \
+  --profile examples/software-engineer/profile.yaml \
+  --job examples/software-engineer/job.md \
+  --target generic --output generated/tailored --no-pdf
+node dist/src/cli/index.js explain generated/tailored/cv.md
+```
+
+Tailoring writes `cv.md`, `cv.html`, optional `cv.pdf`, provenance sidecars, and `matching.json`. It generates a CV bundle, not a GitHub README. Remove `--no-pdf` with Chromium installed. Avoid reusing an output directory containing manually maintained documents: managed artifacts are replaced, and a previous PDF/GitHub README is removed when it is outside the requested bundle.
+
+Markdown and plain-text jobs use deterministic keyword extraction from a common technology vocabulary and disclosed skill names, roles, domains and tags. Matching uses structured evidence metadata, not statements that happen to mention a job keyword. Required matches receive weight 2; preferred matches weight 1. Target priorities break score ties, then achievement IDs determine order. Target achievement and role limits still apply. Unrelated projects, roles, skills and contributions are removed; disclosed person information, education and certifications remain.
+
+Keyword extraction is heuristic. It does not interpret proficiency, years of experience, complex negation, or every technology. Importance applies per line or required/preferred section. `unparsed` reports requirement-like lines with no recognized terms; a partly recognized line may still contain constraints the parser missed. Review coverage rather than treating it as proof of job suitability. If no keywords are recognized, the command asks for structured input.
+
+For precise requirements, use a `.json` job, as in [the structured example](examples/software-engineer/job.json):
+
+```json
+{
+  "requirements": [
+    { "id": "cloud", "label": "Cloud engineering", "terms": ["aws", "azure"], "importance": "required" }
+  ]
+}
+```
+
+Terms within a requirement are alternatives (OR). Use separate requirements for separate capabilities. Unknown terms remain unmatched; the compiler never turns a requested capability into a career fact. `explain` shows all available matching achievement IDs and the subset selected under target limits, including gaps.
+
+## Optional OpenAI polishing
+
+Set `OPENAI_API_KEY` in your environment, then explicitly opt in with a model available to your account that supports structured outputs:
+
+```sh
+node dist/src/cli/index.js tailor --job ./job.md \
+  --polish openai --model "YOUR_STRUCTURED_OUTPUT_MODEL" \
+  --output generated/company-role --no-pdf
+```
+
+Polishing is extractive: the model chooses problem/action/outcome or action/problem/outcome order for every already-selected achievement. Every original statement remains intact. Free-form rewriting and summarization are deliberately deferred because schema validation alone cannot establish factual equivalence or preserve subtle attribution. The model cannot add claims, omit context or select different achievements. IDs, order values and complete coverage are validated before rendering or writing files.
+
+Only selected, CV-disclosed achievement IDs and statements are sent to OpenAI. The person record, job text, unrelated achievements, private evidence files and contact sidecars are excluded. Sanitized source text remains your responsibility. Do not opt in unless those disclosed statements may be sent to the provider.
+
+The provider uses the [Responses structured-output format](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses), with `store: false`, no tools or automatic retries, a 30-second request timeout, a 4096-token output budget, and limits of 50 selected achievements and 64000 input bytes. `store: false` is an API storage setting, not a promise about every provider retention policy. Refusals, incomplete responses, malformed output and HTTP failures stop generation before output changes. Sidecars record provider/model identity and prompt version. Transport and adversarial-output behavior are tested with synthetic fixtures; live model quality has not been evaluated.
 
 ```sh
 pnpm check
 ```
 
-CI also installs Chromium, validates the fictional profile, generates the full bundle and checks the package contents. See [delivery tracking](docs/delivery.md) for scope and verification evidence.
+CI also installs Chromium, validates the fictional profile, generates generic and tailored PDF bundles, exercises structured-job input and checks the package contents. It needs no API key or private-repository access. See [delivery tracking](docs/delivery.md) for scope and verification evidence.

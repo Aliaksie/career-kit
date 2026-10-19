@@ -1,0 +1,7 @@
+{
+  "requirements": [
+    { "id": "typed-services", "label": "Typed services", "terms": ["typescript"], "importance": "required" },
+    { "id": "reliable-services", "label": "Reliable services", "terms": ["reliability"], "importance": "required" },
+    { "id": "rust", "label": "Rust", "terms": ["rust"], "importance": "preferred" }
+  ]
+}
