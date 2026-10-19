@@ -30,6 +30,8 @@ Every entity requires `visibility` (`public`, `sanitized`, or `private`) and a `
 
 Targets contain a name, priorities (tag-to-weight mapping from 0 to 1), `maxAchievements`, and `experience.maxBulletsPerRole`. Ranking sums weights for unique skills, roles, domains and tags. Ties use achievement IDs; role limits apply across projects belonging to that experience. Selection controls achievements; other disclosed facts remain visible. Input order controls section order. Renderers escape source text, and PDF rendering blocks external resource requests.
 
+Before publishing, run `career audit --profile profile.yaml --artifact github --json`, rebuild, then `career verify generated` and review the exact output. Audit reports typed IDs/reasons without contact values or descriptions; IDs can still be private metadata. It checks source disclosure, while verification checks bundle integrity. See [privacy and audit](docs/privacy.md).
+
 ## Contacts
 
 Version 2 optionally accepts `person.contacts`. Each contact has `type` (`email`, `phone`, or `url`), `value`, `visibility`, optional `id` and optional `disclosure`. Person permissions never grant contact access; omitted contact permissions deny all artifacts. Private contacts are always withheld. Explicit IDs are globally unique; omitted IDs become `contact-1`, etc., using original array positions. Use explicit IDs when reordering.
@@ -56,7 +58,7 @@ The [v2 fictional profile](examples/software-engineer/profile-v2.yaml) groups ty
 
 To migrate, retain the old profile revision/package pin, set `version: 2`, add independently disclosed repositories, and replace each contribution’s `project` with `openSourceProject`. Preserve contribution IDs and attribution; explicitly choose repository `relationship`, contribution `kind`, evidenced `status`, and required PR/issue URL. Keep any career project still referenced by achievements. Do not infer status or inherit permissions automatically. Validate and review generic/tailored output before using it; v1 inputs remain supported unchanged. `init` continues to create the v1 starter.
 
-The CLI supports `init`, `validate`, `build`, `tailor`, `verify`, and `explain`. CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
+The CLI supports `init`, `validate`, `build`, `tailor`, `audit`, `verify`, and `explain`. CV import, extended authoring, portfolio generation and plugins remain future work. No productivity scoring or automatic fact invention is included.
 
 ## Tailor a CV
 

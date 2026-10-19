@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
+import { decideDisclosure } from './disclosure.js';
 import { sha256 } from './metadata.js';
 import { profileSchema, type Profile, type Artifact, type Target } from '../schema/profile.js';
 
@@ -50,16 +51,9 @@ export async function loadProfile(path: string): Promise<Profile> {
   return p;
 }
 export function disclose(p: Profile, artifact: Artifact): Profile {
-  const allowed = (e: { visibility: string; disclosure: Record<Artifact, boolean> }) => e.visibility !== 'private' && e.disclosure[artifact];
-  if (!allowed(p.person)) throw new Error(`Person is not disclosed for ${artifact}`);
-  const experiences = p.experiences.filter(allowed);
-  const skills = p.skills.filter(allowed);
-  const projects = p.projects.filter(e => allowed(e) && (!e.experience || experiences.some(x => x.id === e.experience)));
-  const achievements = p.achievements.filter(e => allowed(e) && projects.some(x => x.id === e.project) && e.skills.every(s => skills.some(x => x.id === s)));
-  const common = { experiences, skills, projects, achievements, education: p.education.filter(allowed), certifications: p.certifications.filter(allowed) };
-  if (p.version === 1) return { ...p, ...common, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && projects.some(x => x.id === e.project)) };
-  const openSourceProjects = p.openSourceProjects.filter(allowed);
-  return { ...p, ...common, person: { ...p.person, ...(p.person.contacts ? { contacts: p.person.contacts.filter(allowed) } : {}) }, openSourceProjects, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && openSourceProjects.some(x => x.id === e.openSourceProject)) };
+  const result = decideDisclosure(p, artifact);
+  if (!result.profile) throw new Error(`Person is not disclosed for ${artifact}`);
+  return result.profile;
 }
 export function select(p: Profile, target: Target, scoring?: (a: Profile['achievements'][number]) => number): Profile {
   const score = scoring ?? ((a: Profile['achievements'][number]) => [...new Set([...a.skills, ...a.roles, ...a.domains, ...a.tags])].reduce((sum, tag) => sum + (target.priorities[tag] ?? 0), 0));

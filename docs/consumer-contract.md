@@ -12,12 +12,13 @@ One YAML file contains facts and targets. Relative paths resolve from the caller
 | `validate` | `--profile profile.yaml`; checks schema, global IDs and references. |
 | `build` | `--profile profile.yaml --target generic --output generated`; CV and GitHub bundle. |
 | `tailor --job <file>` | Same profile/target defaults; `--output generated/tailored`; CV-only bundle. |
+| `audit --artifact <cv|github> [--json]` | Same profile default; redacted source-disclosure report before selection. |
 | `verify <directory>` | Validates manifest v1, complete inventory, digests and sidecar/report semantics. |
 | `explain <artifact>` | Checks adjacent sidecar schema and document digest; prints claims/sources. |
 
 Build/tailor produce PDF unless `--no-pdf` is supplied. A case-insensitive `.json` job suffix selects structured requirements; other suffixes use keyword extraction. See the fictional [JSON job](../examples/software-engineer/job.json). Unknown requirements remain unmatched; heuristic extraction can miss constraints. `experience.maxBulletsPerRole` limits achievements per experience, or per project without an experience.
 
-Success exits 0; failure is nonzero. Diagnostics are human-readable, not an API. Optional `--polish openai --model <name>` requires `OPENAI_API_KEY`; only selected disclosed achievement statements/IDs enter the provider. No key is needed offline.
+Success exits 0; failure is nonzero. Diagnostics are human-readable, except the versioned [audit JSON interface](privacy.md). Optional `--polish openai --model <name>` requires `OPENAI_API_KEY`; only selected disclosed achievement statements/IDs enter the provider. No key is needed offline.
 
 ## Compatibility
 
