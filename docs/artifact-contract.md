@@ -1,49 +1,25 @@
-# Artifact contract — current outputs
+# Artifact contract
 
-Applies to the current implementation in `src/application/build.ts`, `tailor.ts` and `src/schema/{provenance,job}.ts`. See the [consumer contract](consumer-contract.md) for invocation and the [planned bundle contract](manifest-audit-contract.md) for future inventory verification.
+## Current inventory
 
-## Inventory
-
-| File | Generic build | Tailor |
+| Output | Generic build | Tailor |
 | --- | --- | --- |
 | `cv.md`, `cv.html` | Required | Required |
-| `cv.pdf` | Required by default; absent with `--no-pdf` | Same |
+| `cv.pdf` | Unless `--no-pdf` | Unless `--no-pdf` |
 | `github-readme.md` | Required | Absent |
-| `<document>.claims.json` | Required for every produced document | Same |
+| `<document>.claims.json` | Every document | Every document |
 | `matching.json` | Absent | Required |
-| `manifest.json` | Not implemented | Not implemented |
 
-All files are direct children of the explicit output directory. `matching.json` has no sidecar of its own. There is no supported directory-scanning inventory API yet. Consumers integrating the current release must use the fixed inventory and process success, then verify every expected document; a future manifest will supersede this fixed inventory.
+Text/HTML is deterministic for identical inputs/configuration; PDF metadata can vary. No manifest or bundle-verification command exists yet.
 
-Text/HTML contents are deterministic for identical validated input/target/job and ordering configuration. PDF metadata may vary across browser runs. The HTML contains inline styling; the PDF browser routes all page requests to abort, blocking remote and local-file resource loads. This is an implementation boundary; supported-host PDF acceptance is still outstanding.
+## Integrity and privacy
 
-## Provenance version 1
+Sidecars use [provenance schema v1](../src/schema/provenance.ts): exact document SHA-256, target and claims with typed source IDs. Tailored targets use `job:<target>` and embed the same report as `matching.json`; the [report schema](../src/schema/job.ts) records requirement coverage, unparsed lines, job digest and optional ordering-provider identity. There is no separate digest for the report file.
 
-Each sidecar is a strict JSON object with:
+`explain` validates one artifact/sidecar pair. It does not certify source facts, disclosure correctness, bundle completeness or authorship. Sidecars contain disclosed claim text; reports may retain sensitive job wording. Review them under the same access policy as their documents.
 
-- `version: 1`, `target` string, lowercase 64-hex `sha256` of the exact document bytes.
-- `claims`: array of `{text: string, sources: string[]}`; each sources array has at least one entry.
-- Optional `tailoring` as described below.
+## Replacement and failures
 
-Generic targets use their configured name; tailored sidecars use `job:<target-name>`. Source prefixes are `person`, `skill`, `experience`, `project`, `achievement`, `education`, `certification`, `contribution`, followed by `:<input-id>`. Achievement claims include achievement and project IDs; contribution claims include contribution and project IDs. Source IDs identify compiler input records, not private evidence paths. Section headings without factual source data need not be claims.
+Managed filenames are replaced. `--no-pdf` removes old PDF/sidecar; tailoring removes GitHub files; generic builds remove the matching report. Unrelated filenames are preserved. Do not put manually maintained documents under managed names.
 
-Sidecars contain disclosed claim text, so handle them with the same privacy as their documents. They are neither signatures nor evidence attestations. They do not include source profile hashes or compiler identity. `explain` hashes the artifact, compares the sidecar digest and validates the sidecar schema; it does not reload the profile, resolve source IDs against it, validate chronology, certify disclosure policy or establish bundle completeness. A person able to alter both files can manufacture a matching pair.
-
-## Matching report
-
-`matching.json` is the same strict `tailoring` object embedded in each tailored sidecar:
-
-- `jobSha256`: lowercase SHA-256 of the UTF-8 job string supplied to matching.
-- `extraction`: `keywords` or `structured`; `unparsed`: string array.
-- `coverage`: array of `{requirement, matched, selected}`. Requirements retain `id`, `label`, `terms`, `importance`; matched/selected arrays contain achievement IDs, not prose.
-- Optional `polishing`: `{provider, model, promptVersion: "source-order-v1"}` when ordering was used on a nonempty selection.
-
-Unknown requirements remain in coverage with empty matches. Unparsed lines and requirement labels may contain job-sensitive text; do not treat reports/sidecars as automatically public. A report does not grant permission to publish job content. No separate provenance sidecar authenticates `matching.json`; embedded copies are not a signed report digest.
-
-## Replacement and failure semantics
-
-Build and tailor replace their managed document/sidecar names. `--no-pdf` removes old `cv.pdf` and its sidecar. Tailor removes old GitHub README/sidecar; generic build removes old `matching.json`. Reusing an output directory changes its kind; do not place manually maintained files under managed names. Other filenames are preserved. Existing `manifest.json` is currently unmanaged and can remain stale; do not trust it with this version.
-
-Validation, target lookup, disclosure/composition and optional provider ordering happen before output mutation. PDF rendering also completes before directory creation/writes; a browser failure therefore does not update the bundle. After this point writes/removals happen sequentially and are **not atomic**: disk/permission/process failures can leave partial files, mixed old/new outputs or artifact/sidecar disagreement. No rollback or completion marker exists. On any nonzero exit, treat the entire output directory as unverified; rebuild in a fresh directory and verify expected documents before use. There is no guarantee that an old successful bundle survives an interrupted write.
-
-Success means awaited writes completed; it does not ensure durable storage after hardware failure. Publication requires separate review and permission. Source auditing planned for S5 cannot certify manually edited output; pair it with digest and future manifest verification.
+Validation, composition, provider ordering and PDF rendering finish before output mutation. Subsequent writes/removals are sequential, not atomic: interruption or filesystem failure can leave mixed/partial outputs. On nonzero exit, reject the bundle, rebuild in a fresh directory and verify every expected document. Existing files named `manifest.json` are unmanaged and must not be trusted with this compiler.

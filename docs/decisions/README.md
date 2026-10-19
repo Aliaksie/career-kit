@@ -1,7 +1,7 @@
-# Domain decisions
+# Domain proposals
 
-These are proposals for the stabilization milestone, not implemented schema guarantees. Adoption is tracked in the workspace execution plan; current behavior is documented in the [consumer contract](../consumer-contract.md).
+These short records explain proposed changes and their trade-offs. They do not describe implemented schema guarantees.
 
-- [001 — Independent open-source repositories and contributions](001-independent-open-source.md)
-- [002 — Contact permissions](002-contact-disclosure.md)
-- [003 — Employer chronology and deferred role migration](003-employer-chronology.md)
+- [Independent open-source repositories](001-independent-open-source.md)
+- [Independent contact disclosure](002-contact-disclosure.md)
+- [Employer-level chronology](003-employer-chronology.md)
