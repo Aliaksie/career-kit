@@ -1,0 +1,93 @@
+version: 2
+person:
+  id: alex-example
+  name: Alex Example
+  headline: Software Engineer
+  summary: Builds reliable services and practical developer tools.
+  visibility: public
+  disclosure:
+    cv: true
+    github: true
+    portfolio: true
+skills:
+  - id: typescript
+    name: TypeScript
+    visibility: public
+    disclosure:
+      cv: true
+      github: true
+experiences:
+  - id: example-role
+    organization: Example Systems (fictional)
+    title: Software Engineer
+    start: 2022-01
+    visibility: public
+    disclosure:
+      cv: true
+      github: true
+projects:
+  - id: sample-service
+    name: Sample Service
+    description: A fictional event processing service.
+    experience: example-role
+    visibility: public
+    disclosure:
+      cv: true
+      github: true
+achievements:
+  - id: reliable-processing
+    project: sample-service
+    statement:
+      problem: Processing failures required manual recovery.
+      action: Implemented retry handling and operational diagnostics.
+      outcome: Enabled automated recovery for transient failures.
+    skills:
+      - typescript
+    roles:
+      - implementation
+    tags:
+      - reliability
+    visibility: public
+    disclosure:
+      cv: true
+      github: true
+education: []
+certifications: []
+openSourceContributions:
+  - id: tools-pr-12
+    openSourceProject: oss-example-tools
+    kind: pr
+    status: merged
+    url: https://github.com/example/example-tools/pull/12
+    description: Fixed argument validation.
+    visibility: public
+    disclosure:
+      cv: true
+      github: true
+  - id: tools-pr-19
+    openSourceProject: oss-example-tools
+    kind: pr
+    status: closed-unmerged
+    url: https://github.com/example/example-tools/pull/19
+    description: Proposed an alternative transport; not merged upstream.
+    visibility: public
+    disclosure:
+      cv: true
+      github: false
+targets:
+  - name: generic
+    priorities:
+      reliability: 1
+    maxAchievements: 12
+    experience:
+      maxBulletsPerRole: 5
+openSourceProjects:
+  - id: oss-example-tools
+    name: Example Tools
+    repository: https://github.com/example/example-tools
+    relationship: upstream
+    description: Fictional developer tools, maintained independently of employment projects.
+    visibility: public
+    disclosure:
+      cv: true
+      github: true

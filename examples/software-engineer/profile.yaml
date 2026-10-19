@@ -1,0 +1,47 @@
+version: 1
+person:
+  id: alex-example
+  name: Alex Example
+  headline: Software Engineer
+  summary: Builds reliable services and practical developer tools.
+  visibility: public
+  disclosure: {cv: true, github: true, portfolio: true}
+skills:
+  - id: typescript
+    name: TypeScript
+    visibility: public
+    disclosure: {cv: true, github: true}
+experiences:
+  - id: example-role
+    organization: Example Systems (fictional)
+    title: Software Engineer
+    start: 2022-01
+    visibility: public
+    disclosure: {cv: true, github: true}
+projects:
+  - id: sample-service
+    name: Sample Service
+    description: A fictional event processing service.
+    experience: example-role
+    visibility: public
+    disclosure: {cv: true, github: true}
+achievements:
+  - id: reliable-processing
+    project: sample-service
+    statement:
+      problem: Processing failures required manual recovery.
+      action: Implemented retry handling and operational diagnostics.
+      outcome: Enabled automated recovery for transient failures.
+    skills: [typescript]
+    roles: [implementation]
+    tags: [reliability]
+    visibility: public
+    disclosure: {cv: true, github: true}
+education: []
+certifications: []
+openSourceContributions: []
+targets:
+  - name: generic
+    priorities: {reliability: 1}
+    maxAchievements: 12
+    experience: {maxBulletsPerRole: 5}
