@@ -9,3 +9,14 @@ Profile v1/v2 readers, provenance v1, manifest v1 and audit v1 have separate ver
 CI should cover locked installation, checks, fictional v1/v2 validation/audit, generic/tailored PDF builds, bundle verification and actual packed-package installation. Hosted execution is evidence only when the intended revision's run succeeds. A local package version is not evidence of a release. Before publishing, verify remote main/tag/package state, choose an available version/distribution channel, align metadata/changelog and retain installed package integrity. Merge/tag/package publication needs its explicit destination authorization.
 
 Consumers pin an exact engine version and lockfile, keep prior source/dependency revisions for rollback, and review regenerated output after upgrades. Private facts/evidence belong in private consumers; public-engine fixtures remain fictional. Never publish source, sidecars or generated artifacts merely to demonstrate package installation.
+
+The proposed initial distribution is an npm-format tarball attached to a GitHub
+release in `Aliaksie/career-kit`, with a matching `v0.2.0` tag. It does not require
+publishing the npm package name. Before creating either, confirm the tag and release
+are unused, run CI on the final revision, and retain the tarball's SHA-256 and npm
+integrity. Attach that verified tarball and a checksum file to the release. A
+consumer can install the exact asset URL with `npm install --save-exact
+https://github.com/Aliaksie/career-kit/releases/download/v0.2.0/career-kit-0.2.0.tgz`
+and commit its lockfile. This URL is a proposed destination until publication is
+verified. Test installation from the published URL before binding a private
+consumer; a GitHub source archive lacks the compiled package and is not equivalent.

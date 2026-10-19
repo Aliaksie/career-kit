@@ -19,7 +19,7 @@ node dist/src/cli/index.js verify generated
 node dist/src/cli/index.js explain generated/cv.md
 ```
 
-For PDF, run `pnpm exec playwright install chromium` and omit `--no-pdf`. To test a distributable locally, run `npm pack` after building and install the resulting tarball in a separate consumer with `npm install --save-exact /absolute/path/to/career-kit-0.1.0.tgz`; use `npx career` there. Version metadata alone is not evidence of a published release. Source development can use `pnpm career`.
+For PDF, run `pnpm exec playwright install chromium` and omit `--no-pdf`. To test a distributable locally, run `npm pack` after building and install the resulting tarball in a separate consumer with `npm install --save-exact /absolute/path/to/career-kit-0.2.0.tgz`; use `npx career` there. Version metadata alone is not evidence of a published release. Source development can use `pnpm career`.
 
 The [v1 starter](examples/software-engineer/profile.yaml) and [v2 example](examples/software-engineer/profile-v2.yaml) are fictional. Store personal profiles in a private consumer repository, outside the compiler checkout. Generated files and root `profile.yaml` are ignored.
 
