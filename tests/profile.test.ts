@@ -33,3 +33,23 @@ describe('profile compiler', () => {
     expect(select(p, target)).toEqual(select(p, target));
   });
 });
+it('rejects malformed fields, invalid dates, unknown projects and target duplication', async () => {
+  const original = await example();
+  expect(() => validateProfile({ ...original, extra: true })).toThrow();
+  const missingProject = structuredClone(original);
+  missingProject.achievements[0].project = 'missing';
+  expect(() => validateProfile(missingProject)).toThrow('Unknown project');
+  const dates = structuredClone(original);
+  dates.experiences[0].end = '2021-12';
+  expect(() => validateProfile(dates)).toThrow('End precedes start');
+  const targets = structuredClone(original);
+  targets.targets.push(targets.targets[0]);
+  expect(() => validateProfile(targets)).toThrow('Duplicate target');
+});
+it('defaults disclosure flags to false and refuses an undisclosed person', async () => {
+  const p = await example();
+  const input = { ...p, person: { ...p.person, disclosure: {} } };
+  const validated = validateProfile(input);
+  expect(validated.person.disclosure).toEqual({ cv: false, github: false, portfolio: false });
+  expect(() => disclose(validated, 'cv')).toThrow('Person is not disclosed');
+});

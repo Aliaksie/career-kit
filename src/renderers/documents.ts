@@ -1,0 +1,52 @@
+import nunjucks from 'nunjucks';
+import type { Profile } from '../schema/profile.js';
+
+export type Claim = { text: string; sources: string[] };
+export type Document = { markdown: string; html: string; claims: Claim[] };
+// Encode source punctuation and HTML so profile text cannot create Markdown links or tags.
+export function markdownText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\\`*_{}[\]()#+.!|~>-]/g, '\\$&').replace(/[\r\n]+/g, ' ');
+}
+export function compose(p: Profile, github = false): Document {
+  const claims: Claim[] = [];
+  const lines: string[] = [];
+  const blocks: { heading?: string; text?: string; bullet?: boolean; level?: number }[] = [];
+  const heading = (text: string, level = 2, sources?: string[]) => { if (sources) claims.push({ text, sources }); lines.push(`${'#'.repeat(level)} ${markdownText(text)}`, ''); blocks.push({ heading: text, level }); };
+  const statement = (text: string, sources: string[], bullet = false) => {
+    claims.push({ text, sources }); lines.push(`${bullet ? '- ' : ''}${markdownText(text)}`, ''); blocks.push({ text, bullet });
+  };
+  heading(p.person.name, 1, [`person:${p.person.id}`]);
+  statement(p.person.headline, [`person:${p.person.id}`]);
+  if (p.person.summary) statement(p.person.summary, [`person:${p.person.id}`]);
+  heading(github ? 'Focus' : 'Skills');
+  for (const skill of p.skills) statement(skill.name, [`skill:${skill.id}`], true);
+  if (!github) {
+    heading('Experience');
+    for (const role of p.experiences) {
+      statement(`${role.title} — ${role.organization} (${role.start} – ${role.end ?? 'present'})`, [`experience:${role.id}`]);
+    }
+  }
+  heading('Selected Work');
+  for (const project of p.projects) {
+    heading(project.name, 3, [`project:${project.id}`]);
+    statement(project.description, [`project:${project.id}`]);
+    for (const a of p.achievements.filter(a => a.project === project.id)) {
+      statement(`${a.statement.problem} ${a.statement.action} ${a.statement.outcome}`, [`achievement:${a.id}`, `project:${project.id}`], true);
+    }
+  }
+  if (p.openSourceContributions.length) {
+    heading('Open Source');
+    for (const c of p.openSourceContributions) statement(c.description, [`contribution:${c.id}`, `project:${c.project}`], true);
+  }
+  if (!github && p.education.length) {
+    heading('Education');
+    for (const e of p.education) statement(`${e.qualification} — ${e.institution}`, [`education:${e.id}`], true);
+  }
+  if (p.certifications.length) {
+    heading('Certifications');
+    for (const c of p.certifications) statement(`${c.name} — ${c.issuer}`, [`certification:${c.id}`], true);
+  }
+  const env = new nunjucks.Environment(undefined, { autoescape: true });
+  const html = env.renderString(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ title }}</title><style>body{font:11pt Arial,sans-serif;line-height:1.5;color:#17202a;max-width:760px;margin:36px auto}h1,h2,h3{break-after:avoid}p{break-inside:avoid}.bullet{margin-left:1em}@page{size:A4;margin:16mm}</style></head><body>{% for b in blocks %}{% if b.heading %}{% if b.level == 1 %}<h1>{{ b.heading }}</h1>{% elif b.level == 3 %}<h3>{{ b.heading }}</h3>{% else %}<h2>{{ b.heading }}</h2>{% endif %}{% else %}<p{% if b.bullet %} class="bullet"{% endif %}>{% if b.bullet %}• {% endif %}{{ b.text }}</p>{% endif %}{% endfor %}</body></html>`, { title: p.person.name, blocks });
+  return { markdown: lines.join('\n'), html, claims };
+}
