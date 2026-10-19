@@ -38,8 +38,8 @@ export function disclose(p: Profile, artifact: Artifact): Profile {
   const achievements = p.achievements.filter(e => allowed(e) && projects.some(x => x.id === e.project) && e.skills.every(s => skills.some(x => x.id === s)));
   return { ...p, experiences, skills, projects, achievements, education: p.education.filter(allowed), certifications: p.certifications.filter(allowed), openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && projects.some(x => x.id === e.project)) };
 }
-export function select(p: Profile, target: Target): Profile {
-  const score = (a: Profile['achievements'][number]) => [...new Set([...a.skills, ...a.roles, ...a.domains, ...a.tags])].reduce((sum, tag) => sum + (target.priorities[tag] ?? 0), 0);
+export function select(p: Profile, target: Target, scoring?: (a: Profile['achievements'][number]) => number): Profile {
+  const score = scoring ?? ((a: Profile['achievements'][number]) => [...new Set([...a.skills, ...a.roles, ...a.domains, ...a.tags])].reduce((sum, tag) => sum + (target.priorities[tag] ?? 0), 0));
   const counts = new Map<string, number>();
   const achievements = [...p.achievements].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id, 'en')).filter(a => {
     const role = p.projects.find(x => x.id === a.project)?.experience ?? a.project;
