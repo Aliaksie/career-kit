@@ -30,6 +30,26 @@ Every entity requires `visibility` (`public`, `sanitized`, or `private`) and a `
 
 Targets contain a name, priorities (tag-to-weight mapping from 0 to 1), `maxAchievements`, and `experience.maxBulletsPerRole`. Ranking sums weights for unique skills, roles, domains and tags. Ties use achievement IDs; role limits apply across projects belonging to that experience. Selection controls achievements; other disclosed facts remain visible. Input order controls section order. Renderers escape source text, and PDF rendering blocks external resource requests.
 
+## Contacts
+
+Version 2 optionally accepts `person.contacts`. Each contact has `type` (`email`, `phone`, or `url`), `value`, `visibility`, optional `id` and optional `disclosure`. Person permissions never grant contact access; omitted contact permissions deny all artifacts. Private contacts are always withheld. Explicit IDs are globally unique; omitted IDs become `contact-1`, etc., using original array positions. Use explicit IDs when reordering.
+
+```yaml
+contacts:
+  - id: work-email
+    type: email
+    value: alex@example.com
+    visibility: public
+    disclosure: { cv: true }
+  - id: work-phone
+    type: phone
+    value: '+12025550123'
+    visibility: public
+    disclosure: { cv: true }
+```
+
+Place this array under `person`. Both examples appear only in CV artifacts, including tailored CVs. Email addresses use a conservative ASCII format; phone numbers use E.164; URL contacts use HTTPS without credentials, query or fragment. Invalid values fail validation even when withheld. Contact links are escaped and have `contact:<id>` provenance. Contacts never enter optional provider requests. Keep private contact sidecars outside compiler input until each field's permissions are chosen explicitly. Profiles without contacts remain supported.
+
 ## Independent open-source work
 
 The [v2 fictional profile](examples/software-engineer/profile-v2.yaml) groups typed contributions under `openSourceProjects`, independently of career projects. Repository and contribution permissions both apply; parent exclusion suppresses children. Rendered status distinguishes merged work from open or closed-unmerged proposals. Disclosed repositories remain in tailored CVs without contributing to achievement matching or ranking. Links require HTTPS without credentials, query or fragment.

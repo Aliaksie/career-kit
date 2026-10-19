@@ -25,6 +25,10 @@ export function compose(p: Profile, github = false, orders: ReadonlyMap<string, 
   heading(p.person.name, 1, [`person:${p.person.id}`]);
   statement(p.person.headline, [`person:${p.person.id}`]);
   if (p.person.summary) statement(p.person.summary, [`person:${p.person.id}`]);
+  if (p.version === 2) for (const contact of p.person.contacts ?? []) {
+    const href = contact.type === 'email' ? `mailto:${encodeURIComponent(contact.value)}` : contact.type === 'phone' ? `tel:${contact.value}` : contact.value;
+    link(contact.value, href, [`contact:${contact.id}`, `person:${p.person.id}`]);
+  }
   heading(github ? 'Focus' : 'Skills');
   for (const skill of p.skills) statement(skill.name, [`skill:${skill.id}`], true);
   if (!github) {

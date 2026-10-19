@@ -5,7 +5,7 @@ import { profileSchema, type Profile, type Artifact, type Target } from '../sche
 export function validateProfile(input: unknown): Profile {
   const p = profileSchema.parse(input);
   const ids = new Set<string>();
-  for (const entity of [p.person, ...p.skills, ...p.experiences, ...p.projects, ...p.achievements, ...p.education, ...p.certifications, ...p.openSourceContributions, ...(p.version === 2 ? p.openSourceProjects : [])]) {
+  for (const entity of [p.person, ...p.skills, ...p.experiences, ...p.projects, ...p.achievements, ...p.education, ...p.certifications, ...p.openSourceContributions, ...(p.version === 2 ? [...p.openSourceProjects, ...(p.person.contacts ?? [])] : [])]) {
     if (ids.has(entity.id)) throw new Error(`Duplicate entity ID: ${entity.id}`);
     ids.add(entity.id);
   }
@@ -48,7 +48,7 @@ export function disclose(p: Profile, artifact: Artifact): Profile {
   const common = { experiences, skills, projects, achievements, education: p.education.filter(allowed), certifications: p.certifications.filter(allowed) };
   if (p.version === 1) return { ...p, ...common, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && projects.some(x => x.id === e.project)) };
   const openSourceProjects = p.openSourceProjects.filter(allowed);
-  return { ...p, ...common, openSourceProjects, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && openSourceProjects.some(x => x.id === e.openSourceProject)) };
+  return { ...p, ...common, person: { ...p.person, ...(p.person.contacts ? { contacts: p.person.contacts.filter(allowed) } : {}) }, openSourceProjects, openSourceContributions: p.openSourceContributions.filter(e => allowed(e) && openSourceProjects.some(x => x.id === e.openSourceProject)) };
 }
 export function select(p: Profile, target: Target, scoring?: (a: Profile['achievements'][number]) => number): Profile {
   const score = scoring ?? ((a: Profile['achievements'][number]) => [...new Set([...a.skills, ...a.roles, ...a.domains, ...a.tags])].reduce((sum, tag) => sum + (target.priorities[tag] ?? 0), 0));
