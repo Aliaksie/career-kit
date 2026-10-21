@@ -17,7 +17,7 @@ Templates are trusted local Nunjucks source, not a sandbox for third-party code.
 
 ## View contract, version 1
 
-Nunjucks receives `view` with these fields. Text-bearing fields are opaque content tokens, not raw profile objects. Emit them unchanged; do not slice, replace, escape, or case-convert tokens. The engine substitutes escaped Markdown or HTML only after layout rendering. Links are encoded by the engine. Do not put tokens in HTML attributes, script/style blocks, or Markdown destinations; use them in text positions. Static headings, CSS and layout markup belong in the template.
+Nunjucks receives `view` with these fields. Text-bearing fields are opaque content tokens, not raw profile objects. Emit them unchanged; do not slice, replace, escape, or case-convert tokens. The engine substitutes escaped Markdown or HTML only after layout rendering. Links are encoded by the engine. LinkedIn and GitHub URL contacts use short service labels while preserving their destinations; other contacts display their values. Do not put tokens in HTML attributes, script/style blocks, or Markdown destinations; use them in text positions. Static headings, CSS and layout markup belong in the template.
 
 | Field | Shape |
 | --- | --- |

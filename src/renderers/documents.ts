@@ -8,6 +8,11 @@ export type Document = { markdown: string; html: string; claims: Claim[]; htmlCl
 export function markdownText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\\`*_{}[\]()#+.!|~>-]/g, '\\$&').replace(/[\r\n]+/g, ' ');
 }
+function contactLabel(type: string, value: string): string {
+  if (type !== 'url') return value;
+  const host = new URL(value).hostname.toLowerCase().replace(/^www\./, '');
+  return host === 'linkedin.com' ? 'LinkedIn' : host === 'github.com' ? 'GitHub' : value;
+}
 function htmlText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
@@ -24,7 +29,7 @@ export function compose(p: Profile, github = false, orders: ReadonlyMap<string, 
   const options = { maxSkills: github ? 12 : 24, maxProjects: github ? 3 : 4, maxBulletsPerProject: github ? 2 : 3, maxCertifications: github ? 0 : 6, ...p.presentation?.[github ? 'github' : 'cv'] };
   const personSource = [`person:${p.person.id}`];
   const person = { name: token(p.person.name, personSource), headline: token(p.person.headline, personSource), summary: p.person.summary ? token(p.person.summary, personSource) : undefined,
-    contacts: p.version === 2 ? (p.person.contacts ?? []).map(c => token(c.value, [`contact:${c.id}`, ...personSource], c.type === 'email' ? `mailto:${encodeURIComponent(c.value)}` : c.type === 'phone' ? `tel:${c.value}` : c.value)) : [] };
+    contacts: p.version === 2 ? (p.person.contacts ?? []).map(c => token(contactLabel(c.type, c.value), [`contact:${c.id}`, ...personSource], c.type === 'email' ? `mailto:${encodeURIComponent(c.value)}` : c.type === 'phone' ? `tel:${c.value}` : c.value)) : [] };
   const usedSkills = new Set(p.achievements.flatMap(a => a.skills));
   const rankedSkills = [...p.skills].sort((a, b) => Number(usedSkills.has(b.id)) - Number(usedSkills.has(a.id)));
   const skills: { label: string; items: string[] }[] = [];
