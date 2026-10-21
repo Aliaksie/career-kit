@@ -66,13 +66,39 @@ it('tailors CV-only output, reports gaps, retains provenance and removes stale a
     await expect(readFile(join(dir, 'matching.json'))).rejects.toMatchObject({ code: 'ENOENT' });
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
-it('leaves existing files unchanged when a model response fails validation', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'career-reject-'));
+it('falls back to the deterministic CV for invalid output and provider failures', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'career-fallback-'));
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
   try {
-    await writeFile(join(dir, 'cv.md'), 'previous');
-    await expect(tailor(await example(), 'TypeScript required', dir, { pdf: false, model: fake({ achievements: [] }) })).rejects.toThrow('omitted');
-    expect(await readFile(join(dir, 'cv.md'), 'utf8')).toBe('previous');
-    await expect(readFile(join(dir, 'matching.json'))).rejects.toMatchObject({ code: 'ENOENT' });
+    const p = await example();
+    await tailor(p, 'TypeScript required', dir, { pdf: false });
+    const baseline = await readFile(join(dir, 'cv.md'), 'utf8');
+    const models = [
+      fake({ achievements: [] }),
+      fake({ achievements: [{ id: 'invented', order: 'action-first' }] }),
+      { identity: { provider: 'fixture', model: 'failure' }, generate: async () => { throw new Error('SECRET'); } },
+    ];
+    for (const model of models) {
+      await tailor(p, 'TypeScript required', dir, { pdf: false, model });
+      expect(await readFile(join(dir, 'cv.md'), 'utf8')).toBe(baseline);
+      const report = JSON.parse(await readFile(join(dir, 'matching.json'), 'utf8'));
+      expect(report).not.toHaveProperty('polishing');
+    }
+    expect(warning).toHaveBeenCalledTimes(models.length);
+    expect(JSON.stringify(warning.mock.calls)).not.toContain('SECRET');
+  } finally {
+    warning.mockRestore();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+it('records polishing only after a valid model result', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'career-polish-'));
+  try {
+    await tailor(await example(), 'TypeScript required', dir, { pdf: false,
+      model: fake({ achievements: [{ id: 'reliable-processing', statement: (await example()).achievements[0].statement, order: 'action-first' }] }),
+    });
+    const report = JSON.parse(await readFile(join(dir, 'matching.json'), 'utf8'));
+    expect(report.polishing).toMatchObject({ provider: 'fixture', model: 'deterministic', promptVersion: 'tailor-cv-v1', reviewRequired: true });
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 it('does not invoke a model for empty selection or beyond the call budget', async () => {

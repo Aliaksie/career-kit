@@ -2,7 +2,7 @@
 
 Every fact has `visibility` and artifact-specific `disclosure`. Private always denies; omitted flags deny; sanitized means the author has already sanitized the supplied text. The compiler does not anonymize evidence. Person denial blocks the entire artifact. Withheld experiences suppress linked projects, withheld projects suppress achievements and legacy contributions, and withheld skills suppress dependent achievements. V2 open-source parents gate their children independently of career projects. Contacts have their own permissions; person permission cannot disclose them.
 
-Build, tailor and audit share one decision function (`application/disclosure`). Filtering precedes selection, rendering and optional provider ordering. Only selected CV achievement IDs/statements enter provider requests. Contacts, private evidence sidecars, person/employment records and job text do not. Do not opt in unless those exact statements may leave the machine.
+Build, tailor and audit share one decision function (`application/disclosure`). Filtering precedes selection, rendering and optional provider editing. Only selected CV achievement IDs/statements, protected phrases derived from them and (for tailoring) extracted job requirements enter provider requests. Contacts, private evidence sidecars, person/employment records and raw job text do not. Extracted requirements can still contain confidential job information. Opt in only when these exact values may leave the machine. See [polishing guardrails and review limits](tailoring.md).
 
 ## Audit v1
 

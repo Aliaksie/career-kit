@@ -17,6 +17,8 @@ it('initializes, validates, builds and explains from another working directory',
     expect(await readFile(join(dir, 'profile.yaml'), 'utf8')).toBe(original);
     await run('validate');
     await expect(run('build', '--target', 'missing', '--no-pdf')).rejects.toMatchObject({ code: 1 });
+    await expect(run('build', '--model', 'test', '--no-pdf')).rejects.toMatchObject({ code: 1 });
+    await expect(run('build', '--polish', 'openai', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await run('build', '--no-pdf');
     expect((await run('verify', 'generated')).stdout).toContain('Bundle is valid');
     expect((await run('explain', 'generated/cv.md')).stdout).toContain('achievement:reliable-processing');
@@ -27,6 +29,8 @@ it('initializes, validates, builds and explains from another working directory',
     expect(report.coverage).toHaveLength(2);
     await expect(run('tailor', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await expect(run('tailor', '--job', 'job.md', '--model', 'example', '--no-pdf')).rejects.toMatchObject({ code: 1 });
+    await expect(run('tailor', '--job', 'job.md', '--endpoint', 'http://localhost:1234/v1', '--no-pdf')).rejects.toMatchObject({ code: 1 });
+    await expect(run('tailor', '--job', 'job.md', '--polish', 'unknown', '--model', 'test', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await expect(run('tailor', '--job', 'job.md', '--polish', 'openai', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await expect(run('tailor', '--job', 'job.md', '--polish', 'openai', '--model', 'example', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await writeFile(join(dir, 'job.json'), JSON.stringify({ requirements: [{ id: 'typed', label: 'Typed code', terms: ['typescript'], importance: 'required' }] }));
@@ -34,4 +38,4 @@ it('initializes, validates, builds and explains from another working directory',
     expect(JSON.parse(await readFile(join(dir, 'generated/tailored/matching.json'), 'utf8')).extraction).toBe('structured');
     await expect(run('validate', '--profile', 'missing.yaml')).rejects.toMatchObject({ code: 1 });
   } finally { await rm(dir, { recursive: true, force: true }); }
-}, 20_000);
+}, 30_000);

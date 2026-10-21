@@ -3,6 +3,8 @@ export type GenerationRequest<T> = {
   name: string;
   instructions: string;
   input: unknown;
+  user?: string;
+  parameters?: { maxTokens: number; temperature?: number };
   schema: z.ZodType<T>;
 };
 export interface LanguageModel {
