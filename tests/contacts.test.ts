@@ -74,3 +74,17 @@ it('keeps contacts out of providers and GitHub artifacts but retains CV provenan
     expect(await readFile(join(dir, 'cv.md.claims.json'), 'utf8')).not.toContain('private@example');
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+it('uses short social-link labels while retaining destinations and contact provenance', async () => {
+  const p = await example([
+    { ...contact, type: 'url', value: 'https://www.linkedin.com/in/alex-example', disclosure: { cv: true, github: true } },
+    { ...contact, type: 'url', value: 'https://github.com/example', disclosure: { cv: true, github: true } },
+    { ...contact, type: 'url', value: 'https://example.com/portfolio', disclosure: { cv: true } },
+  ]);
+  const doc = compose(disclose(p, 'cv'));
+  expect(doc.markdown).toContain('[LinkedIn](<https://www.linkedin.com/in/alex-example>)');
+  expect(doc.markdown).toContain('[GitHub](<https://github.com/example>)');
+  expect(doc.html).toContain('<a href="https://github.com/example">GitHub</a>');
+  expect(doc.claims).toContainEqual({ text: 'LinkedIn — https://www.linkedin.com/in/alex-example', sources: ['contact:contact-1', `person:${p.person.id}`] });
+  expect(doc.markdown).toContain('[https://example');
+});

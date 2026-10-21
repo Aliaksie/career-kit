@@ -1,78 +1,93 @@
 import nunjucks from 'nunjucks';
 import type { Profile } from '../schema/profile.js';
 import type { AchievementOrder } from '../schema/polish.js';
+import { loadTemplates, type Templates } from './templates.js';
 
 export type Claim = { text: string; sources: string[] };
-export type Document = { markdown: string; html: string; claims: Claim[] };
-// Encode source punctuation and HTML so profile text cannot create Markdown links or tags.
+export type Document = { markdown: string; html: string; claims: Claim[]; htmlClaims: Claim[] };
 export function markdownText(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/[\\`*_{}[\]()#+.!|~>-]/g, '\\$&').replace(/[\r\n]+/g, ' ');
 }
-export function compose(p: Profile, github = false, orders: ReadonlyMap<string, AchievementOrder> = new Map()): Document {
-  const claims: Claim[] = [];
-  const lines: string[] = [];
-  const blocks: { heading?: string; text?: string; bullet?: boolean; level?: number; href?: string }[] = [];
-  const heading = (text: string, level = 2, sources?: string[]) => { if (sources) claims.push({ text, sources }); lines.push(`${'#'.repeat(level)} ${markdownText(text)}`, ''); blocks.push({ heading: text, level }); };
-  const statement = (text: string, sources: string[], bullet = false) => {
-    claims.push({ text, sources }); lines.push(`${bullet ? '- ' : ''}${markdownText(text)}`, ''); blocks.push({ text, bullet });
+function contactLabel(type: string, value: string): string {
+  if (type !== 'url') return value;
+  const host = new URL(value).hostname.toLowerCase().replace(/^www\./, '');
+  return host === 'linkedin.com' ? 'LinkedIn' : host === 'github.com' ? 'GitHub' : value;
+}
+function htmlText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+// Templates arrange opaque tokens. Only tokens present in the final output become claims.
+export function compose(p: Profile, github = false, orders: ReadonlyMap<string, AchievementOrder> = new Map(), templates: Templates = loadTemplates()): Document {
+  const entries: { claim: Claim; html: string; markdown: string }[] = [];
+  const token = (text: string, sources: string[], href?: string) => {
+    const destination = href?.replace(/[<>\\]/g, c => encodeURIComponent(c));
+    const index = entries.push({ claim: { text: href ? `${text} — ${href}` : text, sources },
+      html: href ? `<a href="${htmlText(href)}">${htmlText(text)}</a>` : htmlText(text),
+      markdown: href ? `[${markdownText(text)}](<${destination}>)` : markdownText(text) }) - 1;
+    return `CAREER_TOKEN_${index}_END`;
   };
-  const link = (text: string, href: string, sources: string[]) => {
-    claims.push({ text: `${text} — ${href}`, sources });
-    const destination = href.replace(/[<>\\]/g, c => encodeURIComponent(c));
-    lines.push(`- [${markdownText(text)}](<${destination}>)`, '');
-    blocks.push({ text, href, bullet: true });
+  const options = { maxSkills: github ? 12 : 24, maxProjects: github ? 3 : 4, maxBulletsPerProject: github ? 2 : 3, maxCertifications: github ? 0 : 6, ...p.presentation?.[github ? 'github' : 'cv'] };
+  const personSource = [`person:${p.person.id}`];
+  const person = { name: token(p.person.name, personSource), headline: token(p.person.headline, personSource), summary: p.person.summary ? token(p.person.summary, personSource) : undefined,
+    contacts: p.version === 2 ? (p.person.contacts ?? []).map(c => token(contactLabel(c.type, c.value), [`contact:${c.id}`, ...personSource], c.type === 'email' ? `mailto:${encodeURIComponent(c.value)}` : c.type === 'phone' ? `tel:${c.value}` : c.value)) : [] };
+  const usedSkills = new Set(p.achievements.flatMap(a => a.skills));
+  const rankedSkills = [...p.skills].sort((a, b) => Number(usedSkills.has(b.id)) - Number(usedSkills.has(a.id)));
+  const skills: { label: string; items: string[] }[] = [];
+  for (const skill of rankedSkills.slice(0, options.maxSkills)) {
+    const label = skill.group ?? 'Technical skills';
+    let group = skills.find(g => g.label === label);
+    if (!group) { group = { label, items: [] }; skills.push(group); }
+    group.items.push(token(skill.name, [`skill:${skill.id}`]));
+  }
+  // Labels are supplied facts too; omitted groups must not leave provenance behind.
+  for (const group of skills) {
+    const ids = rankedSkills.slice(0, options.maxSkills).filter(s => (s.group ?? 'Technical skills') === group.label).map(s => `skill:${s.id}`);
+    group.label = token(group.label, ids);
+  }
+  const achievementProjects = new Set(p.achievements.map(a => a.project));
+  const featuredIds = new Set(p.projects.filter(project => achievementProjects.has(project.id)).slice(0, options.maxProjects).map(project => project.id));
+  const projectView = (project: Profile['projects'][number], detail: boolean) => {
+    const sources = [`project:${project.id}`];
+    return { name: token(project.name, sources), description: detail ? token(project.description, sources) : undefined,
+      bullets: detail ? p.achievements.filter(a => a.project === project.id).slice(0, options.maxBulletsPerProject).map(a => {
+        // CV prose leads with the action; explicit provider ordering remains respected.
+        const parts = orders.get(a.id) === 'context-first' ? [a.statement.problem, a.statement.action, a.statement.outcome] : [a.statement.action, a.statement.problem, a.statement.outcome];
+        return token(parts.join(' '), [`achievement:${a.id}`, ...sources]);
+      }) : [] };
   };
-  heading(p.person.name, 1, [`person:${p.person.id}`]);
-  statement(p.person.headline, [`person:${p.person.id}`]);
-  if (p.person.summary) statement(p.person.summary, [`person:${p.person.id}`]);
-  if (p.version === 2) for (const contact of p.person.contacts ?? []) {
-    const href = contact.type === 'email' ? `mailto:${encodeURIComponent(contact.value)}` : contact.type === 'phone' ? `tel:${contact.value}` : contact.value;
-    link(contact.value, href, [`contact:${contact.id}`, `person:${p.person.id}`]);
+  const experiences = github ? [] : p.experiences.map(role => {
+    const sources = [`experience:${role.id}`];
+    const projects = p.projects.filter(project => project.experience === role.id);
+    return { organization: token(role.organization, sources), title: token(role.title, sources), dates: token(`${role.start} – ${role.end ?? 'present'}`, sources),
+      projects: projects.filter(project => featuredIds.has(project.id)).map(project => projectView(project, true)),
+      earlier: projects.filter(project => !featuredIds.has(project.id)).map(project => projectView(project, false)) };
+  });
+  const independent = p.projects.filter(project => github || !project.experience).filter(project => featuredIds.has(project.id)).map(project => projectView(project, true));
+  const openSource: { name: string; description?: string; summary?: string }[] = [];
+  if (p.version === 2) for (const project of [...p.openSourceProjects].sort((a, b) => Number(b.relationship === 'own') - Number(a.relationship === 'own'))) {
+    const source = `open-source-project:${project.id}`;
+    const contributions = p.openSourceContributions.filter(c => c.openSourceProject === project.id && (c.status === 'merged' || c.status === 'completed' || c.status === 'active' || c.status === 'former'));
+    openSource.push({ name: token(project.name, [source], project.repository),
+      description: project.description ? token(project.description, [source]) : undefined,
+      summary: project.relationship !== 'own' && contributions.length ? token(contributions.map(c => c.status === 'former' ? `Former maintainer: ${c.description}` : c.description).join(' '), [...contributions.map(c => `contribution:${c.id}`), source]) : undefined });
   }
-  heading(github ? 'Focus' : 'Skills');
-  for (const skill of p.skills) statement(skill.name, [`skill:${skill.id}`], true);
-  if (!github) {
-    heading('Experience');
-    for (const role of p.experiences) {
-      statement(`${role.title} — ${role.organization} (${role.start} – ${role.end ?? 'present'})`, [`experience:${role.id}`]);
-    }
-  }
-  heading('Selected Work');
-  for (const project of p.projects) {
-    heading(project.name, 3, [`project:${project.id}`]);
-    statement(project.description, [`project:${project.id}`]);
-    for (const a of p.achievements.filter(a => a.project === project.id)) {
-      const parts = orders.get(a.id) === 'action-first' ? [a.statement.action, a.statement.problem, a.statement.outcome] : [a.statement.problem, a.statement.action, a.statement.outcome];
-      statement(parts.join(' '), [`achievement:${a.id}`, `project:${project.id}`], true);
-    }
-  }
-  if (p.version === 1 && p.openSourceContributions.length) {
-    heading('Open Source');
-    for (const c of p.openSourceContributions) statement(c.description, [`contribution:${c.id}`, `project:${c.project}`], true);
-  } else if (p.version === 2 && p.openSourceProjects.length) {
-    heading('Open Source');
-    for (const project of p.openSourceProjects) {
-      const source = `open-source-project:${project.id}`;
-      heading(project.name, 3, [source]);
-      link(`${project.name} (${project.relationship})`, project.repository, [source]);
-      if (project.description) statement(project.description, [source]);
-      for (const c of p.openSourceContributions.filter(c => c.openSourceProject === project.id)) {
-        const text = `${c.kind} (${c.status}): ${c.description}`;
-        const sources = [`contribution:${c.id}`, source];
-        if (c.url) link(text, c.url, sources);
-        else statement(text, sources, true);
-      }
-    }
-  }
-  if (!github && p.education.length) {
-    heading('Education');
-    for (const e of p.education) statement(`${e.qualification} — ${e.institution}`, [`education:${e.id}`], true);
-  }
-  if (p.certifications.length) {
-    heading('Certifications');
-    for (const c of p.certifications) statement(`${c.name} — ${c.issuer}`, [`certification:${c.id}`], true);
-  }
-  const env = new nunjucks.Environment(undefined, { autoescape: true });
-  const html = env.renderString(`<!doctype html><html lang="en"><head><meta charset="utf-8"><title>{{ title }}</title><style>body{font:11pt Arial,sans-serif;line-height:1.5;color:#17202a;max-width:760px;margin:36px auto}h1,h2,h3{break-after:avoid}p{break-inside:avoid}.bullet{margin-left:1em}@page{size:A4;margin:16mm}</style></head><body>{% for b in blocks %}{% if b.heading %}{% if b.level == 1 %}<h1>{{ b.heading }}</h1>{% elif b.level == 3 %}<h3>{{ b.heading }}</h3>{% else %}<h2>{{ b.heading }}</h2>{% endif %}{% else %}<p{% if b.bullet %} class="bullet"{% endif %}>{% if b.bullet %}• {% endif %}{% if b.href %}<a href="{{ b.href }}">{{ b.text }}</a>{% else %}{{ b.text }}{% endif %}</p>{% endif %}{% endfor %}</body></html>`, { title: p.person.name, blocks });
-  return { markdown: lines.join('\n'), html, claims };
+  if (p.version === 1) for (const c of p.openSourceContributions) openSource.push({ name: token(c.description, [`contribution:${c.id}`, `project:${c.project}`]) });
+  const view = { version: 1, person, skills, experiences, projects: independent, openSource,
+    education: github ? [] : p.education.map(e => token(`${e.qualification} — ${e.institution}`, [`education:${e.id}`])),
+    certifications: (options.certificationIds ? options.certificationIds.flatMap(id => p.certifications.filter(c => c.id === id)) : p.certifications).slice(0, options.maxCertifications).map(c => token(`${c.name} — ${c.issuer}`, [`certification:${c.id}`])) };
+  const env = new nunjucks.Environment([], { autoescape: true, throwOnUndefined: true });
+  const render = (template: string, format: 'html' | 'markdown') => {
+    const emitted = new Map<number, Claim>();
+    const output = env.renderString(template, { view }).replace(/CAREER_TOKEN_(\d+)_END/g, (_, id: string) => {
+      const entry = entries[Number(id)];
+      if (!entry) throw new Error('Template emitted an unknown content token');
+      emitted.set(Number(id), entry.claim);
+      return entry[format];
+    });
+    if (!emitted.size) throw new Error('Template must emit disclosed content tokens');
+    return { output, claims: [...emitted.values()] };
+  };
+  const md = render(github ? templates.githubMarkdown : templates.cvMarkdown, 'markdown');
+  const html = render(templates.cvHtml, 'html');
+  return { markdown: md.output, html: html.output, claims: md.claims, htmlClaims: html.claims };
 }

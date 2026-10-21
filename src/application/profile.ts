@@ -37,6 +37,9 @@ export function validateProfile(input: unknown): Profile {
     }
     for (const contribution of p.openSourceContributions) reference(contribution.openSourceProject, p.openSourceProjects, 'open-source project');
   }
+  for (const options of [p.presentation?.cv, p.presentation?.github]) {
+    for (const certification of options?.certificationIds ?? []) reference(certification, p.certifications, 'certification');
+  }
   const targets = new Set<string>();
   for (const target of p.targets) {
     if (targets.has(target.name)) throw new Error(`Duplicate target: ${target.name}`);
@@ -55,14 +58,21 @@ export function disclose(p: Profile, artifact: Artifact): Profile {
   if (!result.profile) throw new Error(`Person is not disclosed for ${artifact}`);
   return result.profile;
 }
-export function select(p: Profile, target: Target, scoring?: (a: Profile['achievements'][number]) => number): Profile {
+export function select(p: Profile, target: Target, scoring?: (a: Profile['achievements'][number]) => number, artifact: 'cv' | 'github' = 'cv'): Profile {
   const score = scoring ?? ((a: Profile['achievements'][number]) => [...new Set([...a.skills, ...a.roles, ...a.domains, ...a.tags])].reduce((sum, tag) => sum + (target.priorities[tag] ?? 0), 0));
   const counts = new Map<string, number>();
+  const projectCounts = new Map<string, number>();
+  const presentation = p.presentation?.[artifact];
+  const maxProjects = presentation?.maxProjects ?? (artifact === 'cv' ? 4 : 3);
+  const maxBullets = presentation?.maxBulletsPerProject ?? (artifact === 'cv' ? 3 : 2);
   const achievements = [...p.achievements].sort((a, b) => score(b) - score(a) || a.id.localeCompare(b.id, 'en')).filter(a => {
+    if (maxBullets === 0 || (!projectCounts.has(a.project) && projectCounts.size >= maxProjects)) return false;
+    if ((projectCounts.get(a.project) ?? 0) >= maxBullets) return false;
     const role = p.projects.find(x => x.id === a.project)?.experience ?? a.project;
     const count = counts.get(role) ?? 0;
     if (count >= target.experience.maxBulletsPerRole) return false;
     counts.set(role, count + 1);
+    projectCounts.set(a.project, (projectCounts.get(a.project) ?? 0) + 1);
     return true;
   }).slice(0, target.maxAchievements);
   return { ...p, achievements };

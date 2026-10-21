@@ -23,9 +23,17 @@ const contact = z.discriminatedUnion('type', [
   z.strictObject({ ...contactFields, type: z.literal('url'), value: httpsUrl }),
 ]);
 const contacts = z.array(contact).transform(items => items.map((item, index) => ({ ...item, id: item.id ?? `contact-${index + 1}` })));
+const presentationOptions = z.strictObject({
+  certificationIds: z.array(id).max(100).optional(),
+  maxSkills: z.number().int().min(0).max(100).optional(),
+  maxProjects: z.number().int().min(0).max(100).optional(),
+  maxBulletsPerProject: z.number().int().min(0).max(20).optional(),
+  maxCertifications: z.number().int().min(0).max(100).optional(),
+});
 const common = {
+  presentation: z.strictObject({ cv: presentationOptions.optional(), github: presentationOptions.optional() }).optional(),
   person: z.strictObject({ ...fact, name: text, headline: text, summary: text.optional() }),
-  skills: z.array(z.strictObject({ ...fact, name: text })),
+  skills: z.array(z.strictObject({ ...fact, name: text, group: text.optional() })),
   experiences: z.array(z.strictObject({ ...fact, organization: text, title: text, start: text.regex(/^\d{4}-(0[1-9]|1[0-2])$/), end: text.regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional() })),
   projects: z.array(z.strictObject({ ...fact, name: text, description: text, experience: id.optional() })),
   achievements: z.array(z.strictObject({ ...fact, project: id, statement: z.strictObject({ problem: text, action: text, outcome: text }), skills: list, roles: list, domains: list, tags: list })),

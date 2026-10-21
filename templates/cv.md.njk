@@ -1,0 +1,46 @@
+# {{ view.person.name }}
+
+{{ view.person.headline }}
+{% if view.person.contacts.length %}
+{{ view.person.contacts | join(' · ') }}
+{% endif %}{% if view.person.summary %}
+{{ view.person.summary }}
+{% endif %}{% if view.skills.length %}
+## Core expertise
+{% for group in view.skills %}
+**{{ group.label }}:** {{ group.items | join(', ') }}
+{% endfor %}{% endif %}{% if view.experiences.length %}
+## Professional experience
+{% for role in view.experiences %}
+### {{ role.organization }} | {{ role.dates }}
+
+{{ role.title }}
+{% for project in role.projects %}
+#### {{ project.name }}
+
+{{ project.description }}
+{% for bullet in project.bullets %}
+- {{ bullet }}
+{% endfor %}{% endfor %}{% if role.earlier.length %}
+Other assignments: {% for project in role.earlier %}{{ project.name }}{% if not loop.last %}; {% endif %}{% endfor %}.
+{% endif %}{% endfor %}{% endif %}{% if view.projects.length %}
+## Selected projects
+{% for project in view.projects %}
+### {{ project.name }}
+
+{{ project.description }}
+{% for bullet in project.bullets %}
+- {{ bullet }}
+{% endfor %}{% endfor %}{% endif %}{% if view.openSource.length %}
+## Selected open source
+{% for project in view.openSource %}
+- **{{ project.name }}**{% if project.summary %} — {{ project.summary }}{% elif project.description %} — {{ project.description }}{% endif %}
+{% endfor %}{% endif %}{% if view.education.length %}
+## Education
+{% for item in view.education %}
+{{ item }}
+{% endfor %}{% endif %}{% if view.certifications.length %}
+## Selected certifications
+{% for item in view.certifications %}
+- {{ item }}
+{% endfor %}{% endif %}

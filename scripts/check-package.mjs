@@ -34,8 +34,8 @@ async function checkLinks(directory) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temp], root));
   const paths = packed.files.map(file => file.path);
-  for (const path of paths) assert.match(path, /^(?:dist\/src\/|src\/schema\/|docs\/|examples\/|README\.md$|CHANGELOG\.md$|LICENSE$|package\.json$)/);
-  for (const required of ['dist/src/cli/index.js', 'examples/software-engineer/profile-v2.yaml', 'docs/schema.md', 'docs/privacy.md', 'src/schema/manifest.ts']) assert(paths.includes(required));
+  for (const path of paths) assert.match(path, /^(?:dist\/src\/|src\/schema\/|docs\/|examples\/|templates\/|README\.md$|CHANGELOG\.md$|LICENSE$|package\.json$)/);
+  for (const required of ['dist/src/cli/index.js', 'examples/software-engineer/profile-v2.yaml', 'docs/schema.md', 'docs/privacy.md', 'src/schema/manifest.ts', 'templates/cv.html.njk', 'templates/cv.md.njk', 'templates/github.md.njk']) assert(paths.includes(required));
   const consumer = join(temp, 'consumer');
   await writeFile(join(temp, 'package.json'), '{"private":true}');
   const installed = join(consumer, 'node_modules', 'career-kit');
@@ -71,6 +71,16 @@ try {
       career('verify', output); career('explain', `${output}/cv.html`);
     }
   }
+  const custom = join(consumer, 'presentation');
+  await cp(join(installed, 'templates'), custom, { recursive: true });
+  await writeFile(join(custom, 'cv.md.njk'), '# Consumer CV\n{{ view.person.name }}\n');
+  career('build', '--templates', custom, '--output', 'custom', '--no-pdf');
+  career('verify', 'custom');
+  assert((await readFile(join(consumer, 'custom/cv.md'), 'utf8')).startsWith('# Consumer CV'));
+  assert(!career('explain', 'custom/cv.md').includes('achievement:'));
+  career('tailor', '--templates', custom, '--job', join(installed, 'examples/software-engineer/job.json'), '--output', 'custom', '--no-pdf');
+  career('verify', 'custom');
+  assert((await readFile(join(consumer, 'custom/cv.md'), 'utf8')).startsWith('# Consumer CV'));
   if (packDestination) {
     await mkdir(packDestination, { recursive: true });
     await cp(join(temp, packed.filename), join(packDestination, packed.filename), { errorOnExist: true, force: false });

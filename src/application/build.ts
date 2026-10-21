@@ -6,14 +6,18 @@ import type { Profile } from '../schema/profile.js';
 import type { Tailoring } from '../schema/job.js';
 
 import { compilerIdentity, sha256 as hash } from './metadata.js';
+import { loadTemplates } from '../renderers/templates.js';
 import { publishBundle } from './bundle.js';
 import type { Manifest } from '../schema/manifest.js';
-export async function build(p: Profile, targetName: string, output: string, pdf = true): Promise<void> {
+export async function build(p: Profile, targetName: string, output: string, pdf = true, templateDirectory?: string): Promise<void> {
   const target = p.targets.find(t => t.name === targetName);
   if (!target) throw new Error(`Unknown target: ${targetName}`);
   // Both disclosure checks precede filesystem effects.
-  const cv = compose(select(disclose(p, 'cv'), target));
-  const github = compose(select(disclose(p, 'github'), target), true);
+  const cvProfile = select(disclose(p, 'cv'), target);
+  const githubProfile = select(disclose(p, 'github'), target, undefined, 'github');
+  const templates = loadTemplates(templateDirectory);
+  const cv = compose(cvProfile, false, undefined, templates);
+  const github = compose(githubProfile, true, undefined, templates);
   await writeArtifacts(p, cv, output, targetName, pdf, github);
 }
 export async function writeArtifacts(profile: Profile, cv: Document, output: string, targetName: string, pdf: boolean, github?: Document, tailoring?: Tailoring): Promise<void> {
@@ -21,7 +25,7 @@ export async function writeArtifacts(profile: Profile, cv: Document, output: str
   if (pdf) {
     const browser = await chromium.launch();
     try {
-      const page = await browser.newPage();
+      const page = await browser.newPage({ javaScriptEnabled: false });
       // No remote resources or local file URLs may be loaded by a renderer.
       await page.route('**/*', route => route.abort());
       await page.setContent(cv.html, { waitUntil: 'load' });
@@ -44,7 +48,7 @@ export async function writeArtifacts(profile: Profile, cv: Document, output: str
   }
   for (const [name, contents] of Object.entries(files)) {
     const path = name as Manifest['artifacts'][number]['path'];
-    const provenance = JSON.stringify({ version: 1, target: targetName, sha256: hash(contents), claims: name.startsWith('cv.') ? cv.claims : github!.claims, ...(tailoring ? { tailoring } : {}) }, null, 2) + '\n';
+    const provenance = JSON.stringify({ version: 1, target: targetName, sha256: hash(contents), claims: name === 'cv.md' ? cv.claims : name.startsWith('cv.') ? cv.htmlClaims : github!.claims, ...(tailoring ? { tailoring } : {}) }, null, 2) + '\n';
     bundle.set(path, contents); bundle.set(`${path}.claims.json`, provenance);
     manifest.artifacts.push({ path, format: path.endsWith('.md') ? 'markdown' : path.endsWith('.html') ? 'html' : 'pdf', sha256: hash(contents), provenance: { path: `${path}.claims.json`, version: 1, sha256: hash(provenance) } });
   }

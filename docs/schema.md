@@ -37,3 +37,7 @@ contacts:
 These fictional values are CV-only, including tailored CVs. Both person and contact permissions must allow an artifact. Omitting the contact disclosure mapping denies everything. A private contact always denies. Optional IDs become `contact-1`, etc. using original array positions before filtering; collisions fail validation. Use explicit IDs when reordering.
 
 Email uses conservative ASCII syntax, phone uses E.164 and URL uses HTTPS without credentials/query/fragment. Unsafe values fail even when withheld. Links are escaped; provenance uses `contact:<id>`. Contacts never enter provider requests. Profiles without contacts remain supported; keep private sidecars outside compiler input until per-field permissions are explicitly chosen. See the [contact decision](decisions/002-contact-disclosure.md).
+
+## Presentation fields
+
+Both supported versions accept optional skill `group` labels and `presentation.cv` / `presentation.github` content budgets, including optional ordered `certificationIds`. These are additive fields requiring an engine upgrade before use. See [presentation](templates.md). Presentation never grants disclosure.
