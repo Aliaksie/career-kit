@@ -18,6 +18,6 @@ export const tailoringSchema = z.strictObject({
   extraction: z.enum(['keywords', 'structured']),
   unparsed: z.array(z.string()),
   coverage: z.array(coverageSchema),
-  polishing: z.strictObject({ provider: z.string(), model: z.string(), promptVersion: z.literal('source-order-v1') }).optional(),
+  polishing: z.strictObject({ provider: z.string(), model: z.string(), promptVersion: z.enum(['source-order-v1', 'tailor-cv-v1']), reviewRequired: z.literal(true).optional() }).optional(),
 });
 export type Tailoring = z.infer<typeof tailoringSchema>;

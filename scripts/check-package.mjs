@@ -35,7 +35,7 @@ try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temp], root));
   const paths = packed.files.map(file => file.path);
   for (const path of paths) assert.match(path, /^(?:dist\/src\/|src\/schema\/|docs\/|examples\/|templates\/|prompts\/|README\.md$|CHANGELOG\.md$|LICENSE$|package\.json$)/);
-  for (const required of ['dist/src/cli/index.js', 'examples/software-engineer/profile-v2.yaml', 'docs/schema.md', 'docs/privacy.md', 'src/schema/manifest.ts', 'prompts/clause-order.md', 'templates/cv.html.njk', 'templates/cv.md.njk', 'templates/github.md.njk']) assert(paths.includes(required));
+  for (const required of ['dist/src/cli/index.js', 'examples/software-engineer/profile-v2.yaml', 'docs/schema.md', 'docs/privacy.md', 'src/schema/manifest.ts', 'prompts/clause-order.md', 'prompts/polish-cv.md', 'prompts/tailor-cv.md', 'templates/cv.html.njk', 'templates/cv.md.njk', 'templates/github.md.njk']) assert(paths.includes(required));
   const consumer = join(temp, 'consumer');
   await writeFile(join(temp, 'package.json'), '{"private":true}');
   const installed = join(consumer, 'node_modules', 'career-kit');
@@ -66,6 +66,24 @@ try {
       },
     });
     assert(orders.size > 0);
+  `], consumer);
+  const editingModule = pathToFileURL(join(installed, 'dist/src/application/edit-cv.js')).href;
+  run(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { editCV } from ${JSON.stringify(editingModule)};
+    import { loadProfile } from ${JSON.stringify(profileModule)};
+    const profile = await loadProfile(${JSON.stringify(join(installed, 'examples/software-engineer/profile.yaml'))});
+    for (const requirements of [undefined, []]) {
+      const result = await editCV(profile, {
+        identity: { provider: 'fixture', model: 'offline' },
+        async generate(request) {
+          assert.equal(request.parameters.maxTokens, 8192);
+          assert(request.user.includes('JSON'));
+          return { achievements: request.input.achievements.map(a => ({ id: a.id, statement: a.statement, order: 'action-first' })) };
+        },
+      }, requirements);
+      assert.equal(result.metadata.promptVersion, requirements ? 'tailor-cv-v1' : 'polish-cv-v1');
+    }
   `], consumer);
   const metadata = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
   assert.equal(career('--version').trim(), metadata.version);

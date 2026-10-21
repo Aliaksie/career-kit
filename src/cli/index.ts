@@ -10,6 +10,19 @@ import type { Audit } from '../schema/audit.js';
 import { verifyBundle } from '../application/bundle.js';
 import { compilerIdentity } from '../application/metadata.js';
 
+function polishingOptions(command: Command): Command {
+  return command.option('--polish <provider>', 'opt in to AI wording edits: openai, anthropic, google, openai-compatible')
+    .option('--model <name>', 'explicit model supporting structured outputs')
+    .option('--endpoint <url>', 'provider API base URL; required for openai-compatible')
+    .option('--api-key-env <name>', 'environment variable containing the provider API key');
+}
+async function configuredModel(opts: { polish?: string; model?: string; endpoint?: string; apiKeyEnv?: string }) {
+  if (opts.polish && !opts.model) throw new Error('--model is required with --polish');
+  if (!opts.polish && (opts.model || opts.endpoint || opts.apiKeyEnv)) throw new Error('--model, --endpoint and --api-key-env require --polish');
+  return opts.polish ? (await import('../llm/sdk.js')).createLanguageModel({ provider: opts.polish, model: opts.model!,
+    endpoint: opts.endpoint, apiKeyEnv: opts.apiKeyEnv }) : undefined;
+}
+
 const isAudit = process.argv[2] === 'audit';
 const auditJson = isAudit && process.argv.slice(3).includes('--json');
 function printAudit(result: Audit): void {
@@ -41,24 +54,18 @@ program.command('init').description('Create a fictional example profile without 
 program.command('validate').description('Validate schema and references').option('-p, --profile <file>', 'profile file', 'profile.yaml').action(async opts => {
   await loadProfile(opts.profile); console.log('Profile is valid');
 });
-program.command('build').description('Build deterministic content; PDF bytes may contain browser metadata').option('-p, --profile <file>', 'profile file', 'profile.yaml').option('-t, --target <name>', 'target name', 'generic').option('-o, --output <directory>', 'output directory', 'generated').option('--templates <directory>', 'trusted consumer template pack directory').option('--no-pdf', 'skip PDF when Chromium is unavailable').action(async opts => {
-  await build(await loadProfile(opts.profile), opts.target, opts.output, opts.pdf, opts.templates); console.log(`Built artifacts in ${opts.output}`);
+polishingOptions(program.command('build').description('Build career content with optional CV wording edits').option('-p, --profile <file>', 'profile file', 'profile.yaml').option('-t, --target <name>', 'target name', 'generic').option('-o, --output <directory>', 'output directory', 'generated').option('--templates <directory>', 'trusted consumer template pack directory').option('--no-pdf', 'skip PDF when Chromium is unavailable')).action(async opts => {
+  const model = await configuredModel(opts);
+  await build(await loadProfile(opts.profile), opts.target, opts.output, opts.pdf, opts.templates, model); console.log(`Built artifacts in ${opts.output}`);
 });
-program.command('tailor').description('Match a job to disclosed evidence and generate a tailored CV')
+polishingOptions(program.command('tailor').description('Match a job to disclosed evidence and generate a tailored CV')
   .requiredOption('--job <file>', 'Markdown/text job, or structured JSON requirements')
   .option('-p, --profile <file>', 'profile file', 'profile.yaml')
   .option('-t, --target <name>', 'target limits and tie-breaking priorities', 'generic')
   .option('-o, --output <directory>', 'output directory', 'generated/tailored')
-  .option('--templates <directory>', 'trusted consumer template pack directory').option('--no-pdf', 'skip PDF when Chromium is unavailable')
-  .option('--polish <provider>', 'opt in to clause ordering: openai, anthropic, google, openai-compatible')
-  .option('--model <name>', 'explicit model supporting structured outputs')
-  .option('--endpoint <url>', 'provider API base URL; required for openai-compatible')
-  .option('--api-key-env <name>', 'environment variable containing the provider API key')
+  .option('--templates <directory>', 'trusted consumer template pack directory').option('--no-pdf', 'skip PDF when Chromium is unavailable'))
   .action(async opts => {
-    if (opts.polish && !opts.model) throw new Error('--model is required with --polish');
-    if (!opts.polish && (opts.model || opts.endpoint || opts.apiKeyEnv)) throw new Error('--model, --endpoint and --api-key-env require --polish');
-    const model = opts.polish ? (await import('../llm/sdk.js')).createLanguageModel({ provider: opts.polish, model: opts.model,
-      endpoint: opts.endpoint, apiKeyEnv: opts.apiKeyEnv }) : undefined;
+    const model = await configuredModel(opts);
     await tailor(await loadProfile(opts.profile), await readFile(opts.job, 'utf8'), opts.output, {
       target: opts.target, structured: opts.job.toLowerCase().endsWith('.json'), pdf: opts.pdf, model, templateDirectory: opts.templates,
     });

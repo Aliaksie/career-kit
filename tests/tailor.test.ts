@@ -95,10 +95,10 @@ it('records polishing only after a valid model result', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'career-polish-'));
   try {
     await tailor(await example(), 'TypeScript required', dir, { pdf: false,
-      model: fake({ achievements: [{ id: 'reliable-processing', order: 'action-first' }] }),
+      model: fake({ achievements: [{ id: 'reliable-processing', statement: (await example()).achievements[0].statement, order: 'action-first' }] }),
     });
     const report = JSON.parse(await readFile(join(dir, 'matching.json'), 'utf8'));
-    expect(report.polishing).toMatchObject({ provider: 'fixture', model: 'deterministic', promptVersion: 'source-order-v1' });
+    expect(report.polishing).toMatchObject({ provider: 'fixture', model: 'deterministic', promptVersion: 'tailor-cv-v1', reviewRequired: true });
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 it('does not invoke a model for empty selection or beyond the call budget', async () => {

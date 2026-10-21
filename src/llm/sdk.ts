@@ -23,9 +23,9 @@ export class SDKProvider implements LanguageModel {
     if (Buffer.byteLength(input) > 64_000) throw new Error('Polishing input exceeds 64000 bytes; reduce the achievement limit');
     try {
       const result = await generateText({
-        model: this.model, system: request.instructions, prompt: input,
+        model: this.model, system: request.instructions, prompt: request.user ? `${request.user}\n\n${input}` : input,
         output: Output.object({ schema: request.schema, name: request.name }),
-        maxOutputTokens: 4096, maxRetries: 0, abortSignal: AbortSignal.timeout(30_000),
+        maxOutputTokens: request.parameters?.maxTokens ?? 4096, temperature: request.parameters?.temperature, maxRetries: 0, abortSignal: AbortSignal.timeout(30_000),
         providerOptions: this.identity.provider === 'openai' ? { openai: { store: false } } : undefined,
       });
       if (result.finishReason !== 'stop') throw new Error('Incomplete output');

@@ -18,7 +18,7 @@ One YAML file contains facts and targets. Relative paths resolve from the caller
 
 Build/tailor produce PDF unless `--no-pdf` is supplied. A case-insensitive `.json` job suffix selects structured requirements; other suffixes use keyword extraction. See the fictional [JSON job](../examples/software-engineer/job.json). Unknown requirements remain unmatched; heuristic extraction can miss constraints. `experience.maxBulletsPerRole` limits achievements per experience, or per project without an experience.
 
-Success exits 0; failure is nonzero. Diagnostics are human-readable, except the versioned [audit JSON interface](privacy.md). Optional `--polish <provider> --model <name>` uses environment credentials and an optional `--endpoint` through the AI SDK; see [provider configuration](tailoring.md). Only selected disclosed achievement statements/IDs enter the provider. Provider failure or invalid model output produces the deterministic CV with a fixed warning. No key is needed offline.
+Success exits 0; failure is nonzero. Diagnostics are human-readable, except the versioned [audit JSON interface](privacy.md). Both `build` and `tailor` accept optional `--polish <provider> --model <name>` uses environment credentials and an optional `--endpoint` through the AI SDK; see [provider configuration](tailoring.md). Selected disclosed achievement statements/IDs and derived protected phrases enter the provider; tailoring additionally sends extracted requirements. Successful rewrites require human review; see the guardrail limits in [tailoring](tailoring.md). Provider failure or invalid model output produces the deterministic CV with a fixed warning. No key is needed offline.
 
 ## Compatibility
 

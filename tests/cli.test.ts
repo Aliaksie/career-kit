@@ -17,6 +17,8 @@ it('initializes, validates, builds and explains from another working directory',
     expect(await readFile(join(dir, 'profile.yaml'), 'utf8')).toBe(original);
     await run('validate');
     await expect(run('build', '--target', 'missing', '--no-pdf')).rejects.toMatchObject({ code: 1 });
+    await expect(run('build', '--model', 'test', '--no-pdf')).rejects.toMatchObject({ code: 1 });
+    await expect(run('build', '--polish', 'openai', '--no-pdf')).rejects.toMatchObject({ code: 1 });
     await run('build', '--no-pdf');
     expect((await run('verify', 'generated')).stdout).toContain('Bundle is valid');
     expect((await run('explain', 'generated/cv.md')).stdout).toContain('achievement:reliable-processing');
