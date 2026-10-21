@@ -21,7 +21,7 @@ it('retains legacy project-linked contribution rendering, provenance and tailori
   p.openSourceContributions.push({ id: 'legacy-fix', project: 'sample-service', description: 'Legacy fix.', visibility: 'public', disclosure: { cv: true, github: true, portfolio: false } });
   const validated = validateProfile(p);
   const rendered = compose(disclose(validated, 'cv'));
-  expect(rendered.markdown).toContain('- Legacy fix\\.');
+  expect(rendered.markdown).toContain('Legacy fix\\.');
   expect(rendered.claims).toContainEqual({ text: 'Legacy fix.', sources: ['contribution:legacy-fix', 'project:sample-service'] });
   expect(matchJob(validated, 'Rust required', 'generic').profile.openSourceContributions).toEqual([]);
   p.projects[0].disclosure.cv = false;
@@ -37,7 +37,9 @@ it('keeps independent contributions when career work is withheld or unmatched', 
   const tailored = matchJob(p, 'Rust required', 'generic');
   expect(tailored.profile.achievements).toEqual([]);
   expect(tailored.profile.openSourceContributions).toHaveLength(2);
-  expect(compose(tailored.profile).html).toContain('closed-unmerged');
+  expect(compose(tailored.profile).html).toContain('Fixed argument validation');
+  expect(compose(tailored.profile).html).not.toContain('closed-unmerged');
+  expect(compose(tailored.profile).claims.some(c => c.sources.includes('contribution:tools-pr-19'))).toBe(false);
   expect(tailored.report.coverage[0].matched).toEqual([]);
 });
 
@@ -109,7 +111,7 @@ it('writes independent provenance through generic/tailored builds and isolates p
     const p = await example();
     await build(p, 'generic', dir, false);
     const claims = JSON.parse(await readFile(join(dir, 'cv.md.claims.json'), 'utf8')).claims;
-    expect(claims).toContainEqual({ text: 'pr (merged): Fixed argument validation. — https://github.com/example/example-tools/pull/12', sources: ['contribution:tools-pr-12', 'open-source-project:oss-example-tools'] });
+    expect(claims).toContainEqual({ text: 'Fixed argument validation.', sources: ['contribution:tools-pr-12', 'open-source-project:oss-example-tools'] });
     expect(await explain(join(dir, 'cv.html'))).toContain('open-source-project:oss-example-tools');
     const github = await explain(join(dir, 'github-readme.md'));
     expect(github).toContain('tools-pr-12');
@@ -125,7 +127,9 @@ it('writes independent provenance through generic/tailored builds and isolates p
     };
     await tailor(p, 'TypeScript required', dir, { pdf: false, model });
     expect(calls).toBe(1);
-    expect(await explain(join(dir, 'cv.md'))).toContain('contribution:tools-pr-19');
+    expect(await explain(join(dir, 'cv.md'))).toContain('contribution:tools-pr-12');
+    expect(await explain(join(dir, 'cv.md'))).not.toContain('contribution:tools-pr-19');
+    await tailor(p, 'TypeScript required', dir, { pdf: false });
     const first = await readFile(join(dir, 'cv.md'), 'utf8');
     await tailor(p, 'TypeScript required', dir, { pdf: false });
     expect(await readFile(join(dir, 'cv.md'), 'utf8')).toBe(first);

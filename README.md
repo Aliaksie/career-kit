@@ -64,3 +64,7 @@ Markdown/text keyword extraction is heuristic; strict [JSON requirements](exampl
 Run `pnpm check`. Hosted CI also installs matching Chromium, checks generic/tailored PDFs, audits fictional v1/v2 inputs and tests the packed package in an isolated consumer. See [architecture](docs/architecture.md), [domain decisions](docs/decisions/README.md) and [delivery/compatibility](docs/delivery.md).
 
 The compiler keeps offline composition, explicit disclosure, factual clauses and source attribution central. Reviewed imports, authoring tools, configurable templates, portfolio output and stable extension contracts are future work. Free-form rewriting, career scoring, automatic fact invention and automatic publication are outside the current contract.
+
+## Presentation templates
+
+CV and GitHub use separate layouts with grouped skills, employer-owned assignments and compact open-source summaries. Consumers can supply a trusted template pack with `--templates <directory>` to both build and tailor while retaining disclosure, matching, PDF, provenance and bundle verification. See [templates and presentation](docs/templates.md) for the view contract, content budgets and migration notes.

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Replace the flat CV/README renderer with separate templates, grouped skills, employer-owned assignments, compact earlier work, delivered open-source summaries and selected credentials.
+- Add optional skill groups and per-artifact presentation budgets to profile v1/v2. Budgets also bound achievement selection; default CV prose leads with the action while retaining all source clauses and qualifiers.
+- Support trusted consumer template packs through `build --templates` and `tailor --templates`. Ship templates in the package and derive per-format provenance from actually emitted content tokens. PDF disables JavaScript as well as external requests.
+- Presentation compatibility: individual PR/status ledgers and unmerged proposals no longer appear in default output; own repositories use project descriptions. Full records remain available to disclosure audits. Existing inputs still validate; output layout and selected content change. Upgrade the consumer engine pin before adding presentation fields. See [template guidance](docs/templates.md).
+
 ## 0.2.0
 
 - Publish tested npm-format packages through a tag-triggered GitHub Actions release workflow, including checksums and npm integrity metadata. Ordinary PRs and main pushes run checks only.

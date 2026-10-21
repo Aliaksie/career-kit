@@ -1,0 +1,28 @@
+# {{ view.person.name }}
+
+{{ view.person.headline }}
+{% if view.person.summary %}
+{{ view.person.summary }}
+{% endif %}{% if view.person.contacts.length %}
+{{ view.person.contacts | join(' · ') }}
+{% endif %}{% if view.skills.length %}
+## Focus
+{% for group in view.skills %}
+**{{ group.label }}:** {{ group.items | join(', ') }}
+{% endfor %}{% endif %}{% if view.openSource.length %}
+## Public projects and contributions
+{% for project in view.openSource %}
+### {{ project.name }}
+{% if project.summary %}
+{{ project.summary }}
+{% elif project.description %}
+{{ project.description }}
+{% endif %}{% endfor %}{% elif view.projects.length %}
+## Selected work
+{% for project in view.projects %}
+### {{ project.name }}
+
+{{ project.description }}
+{% for bullet in project.bullets %}
+- {{ bullet }}
+{% endfor %}{% endfor %}{% endif %}
