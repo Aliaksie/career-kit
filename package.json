@@ -14,6 +14,7 @@
   "files": [
     "dist/src",
     "templates",
+    "prompts",
     "src/schema",
     "docs",
     "examples",
@@ -25,12 +26,17 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "npm run build && vitest run dist/tests",
+    "test": "npm run build && vitest run dist/tests --maxWorkers=2",
     "career": "tsx src/cli/index.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "test:package": "pnpm build && node scripts/check-package.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.85",
+    "@ai-sdk/google": "^4.0.102",
+    "@ai-sdk/openai": "^4.0.99",
+    "@ai-sdk/openai-compatible": "^3.0.75",
+    "ai": "^7.0.148",
     "commander": "14.0.3",
     "nunjucks": "3.2.4",
     "playwright": "1.60.0",
@@ -44,7 +50,7 @@
     "tsx": "4.23.13",
     "typescript": "5.9.3",
     "typescript-eslint": "8.68.0",
-    "vitest": "4.1.8",
-    "vite": "6.4.3"
+    "vite": "6.4.3",
+    "vitest": "4.1.8"
   }
 }

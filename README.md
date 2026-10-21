@@ -1,6 +1,6 @@
 # Career Kit
 
-An evidence-grounded career profile compiler. Maintain facts in YAML and generate a CV and GitHub README from the same source. Validation, compilation and job tailoring run offline after installation. Optional OpenAI support only orders complete source clauses; it does not rewrite facts.
+An evidence-grounded career profile compiler. Maintain facts in YAML and generate a CV and GitHub README from the same source. Validation, compilation and job tailoring run offline after installation. Optional AI support only orders complete source clauses; it does not rewrite facts.
 
 Requires Node.js 24+. Source development uses pnpm 10.34.5. PDF requires Chromium matching the installed Playwright version.
 
@@ -57,7 +57,7 @@ node dist/src/cli/index.js tailor \
 node dist/src/cli/index.js verify generated/tailored
 ```
 
-Markdown/text keyword extraction is heuristic; strict [JSON requirements](examples/software-engineer/job.json) provide a more explicit alternative. Unmatched requirements remain visible. No API key is needed. [Tailoring guidance](docs/tailoring.md) describes limitations and explicit OpenAI opt-in.
+Markdown/text keyword extraction is heuristic; strict [JSON requirements](examples/software-engineer/job.json) provide a more explicit alternative. Unmatched requirements remain visible. No API key is needed. [Tailoring guidance](docs/tailoring.md) describes limitations and explicit provider/model opt-in.
 
 ## Development and direction
 

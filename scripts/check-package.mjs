@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const reuseDependencies = process.argv.includes('--reuse-dependencies');
 const destinationIndex = process.argv.indexOf('--pack-destination');
@@ -34,8 +34,8 @@ async function checkLinks(directory) {
 try {
   const [packed] = JSON.parse(run('npm', ['pack', '--json', '--pack-destination', temp], root));
   const paths = packed.files.map(file => file.path);
-  for (const path of paths) assert.match(path, /^(?:dist\/src\/|src\/schema\/|docs\/|examples\/|templates\/|README\.md$|CHANGELOG\.md$|LICENSE$|package\.json$)/);
-  for (const required of ['dist/src/cli/index.js', 'examples/software-engineer/profile-v2.yaml', 'docs/schema.md', 'docs/privacy.md', 'src/schema/manifest.ts', 'templates/cv.html.njk', 'templates/cv.md.njk', 'templates/github.md.njk']) assert(paths.includes(required));
+  for (const path of paths) assert.match(path, /^(?:dist\/src\/|src\/schema\/|docs\/|examples\/|templates\/|prompts\/|README\.md$|CHANGELOG\.md$|LICENSE$|package\.json$)/);
+  for (const required of ['dist/src/cli/index.js', 'examples/software-engineer/profile-v2.yaml', 'docs/schema.md', 'docs/privacy.md', 'src/schema/manifest.ts', 'prompts/clause-order.md', 'templates/cv.html.njk', 'templates/cv.md.njk', 'templates/github.md.njk']) assert(paths.includes(required));
   const consumer = join(temp, 'consumer');
   await writeFile(join(temp, 'package.json'), '{"private":true}');
   const installed = join(consumer, 'node_modules', 'career-kit');
@@ -50,6 +50,23 @@ try {
   }
   const cli = join(installed, 'dist', 'src', 'cli', 'index.js');
   const career = (...args) => run(process.execPath, [cli, ...args], consumer);
+  // Exercise the prompt from the packed layout, without calling a provider.
+  const polishModule = pathToFileURL(join(installed, 'dist/src/application/polish.js')).href;
+  const profileModule = pathToFileURL(join(installed, 'dist/src/application/profile.js')).href;
+  run(process.execPath, ['--input-type=module', '-e', `
+    import assert from 'node:assert/strict';
+    import { polish } from ${JSON.stringify(polishModule)};
+    import { loadProfile } from ${JSON.stringify(profileModule)};
+    const profile = await loadProfile(${JSON.stringify(join(installed, 'examples/software-engineer/profile.yaml'))});
+    const orders = await polish(profile, {
+      identity: { provider: 'fixture', model: 'offline' },
+      async generate(request) {
+        assert(request.instructions.includes('Preserve qualifiers and team attribution'));
+        return { achievements: request.input.achievements.map(a => ({ id: a.id, order: 'action-first' })) };
+      },
+    });
+    assert(orders.size > 0);
+  `], consumer);
   const metadata = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
   assert.equal(career('--version').trim(), metadata.version);
   if (!reuseDependencies) assert.equal(run(join(consumer, 'node_modules', '.bin', 'career'), ['--version'], consumer).trim(), metadata.version);

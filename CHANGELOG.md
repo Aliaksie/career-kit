@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Configure OpenAI, Anthropic, Google or an OpenAI-compatible endpoint through Vercel AI SDK, with API keys supplied through environment variables.
+- Load the clause-order prompt from bundled Markdown and fall back to the deterministic CV when optional polishing fails or returns invalid output.
+
 - Use compact clickable LinkedIn/GitHub labels in contact headers, with visible link styling in the CV print template.
 
 - Replace the flat CV/README renderer with separate templates, grouped skills, employer-owned assignments, compact earlier work, delivered open-source summaries and selected credentials.

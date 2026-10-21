@@ -9,7 +9,6 @@ import { auditFile, auditFailure } from '../application/audit.js';
 import type { Audit } from '../schema/audit.js';
 import { verifyBundle } from '../application/bundle.js';
 import { compilerIdentity } from '../application/metadata.js';
-import { OpenAIProvider } from '../llm/openai.js';
 
 const isAudit = process.argv[2] === 'audit';
 const auditJson = isAudit && process.argv.slice(3).includes('--json');
@@ -51,13 +50,15 @@ program.command('tailor').description('Match a job to disclosed evidence and gen
   .option('-t, --target <name>', 'target limits and tie-breaking priorities', 'generic')
   .option('-o, --output <directory>', 'output directory', 'generated/tailored')
   .option('--templates <directory>', 'trusted consumer template pack directory').option('--no-pdf', 'skip PDF when Chromium is unavailable')
-  .option('--polish <provider>', 'opt in to source-clause ordering via OpenAI')
-  .option('--model <name>', 'explicit OpenAI model supporting structured outputs')
+  .option('--polish <provider>', 'opt in to clause ordering: openai, anthropic, google, openai-compatible')
+  .option('--model <name>', 'explicit model supporting structured outputs')
+  .option('--endpoint <url>', 'provider API base URL; required for openai-compatible')
+  .option('--api-key-env <name>', 'environment variable containing the provider API key')
   .action(async opts => {
-    if (opts.polish && opts.polish !== 'openai') throw new Error('Only the openai polishing provider is supported');
-    if (opts.polish && !opts.model) throw new Error('--model is required with --polish openai');
-    if (opts.model && !opts.polish) throw new Error('--model requires --polish openai');
-    const model = opts.polish ? new OpenAIProvider(process.env.OPENAI_API_KEY ?? '', opts.model) : undefined;
+    if (opts.polish && !opts.model) throw new Error('--model is required with --polish');
+    if (!opts.polish && (opts.model || opts.endpoint || opts.apiKeyEnv)) throw new Error('--model, --endpoint and --api-key-env require --polish');
+    const model = opts.polish ? (await import('../llm/sdk.js')).createLanguageModel({ provider: opts.polish, model: opts.model,
+      endpoint: opts.endpoint, apiKeyEnv: opts.apiKeyEnv }) : undefined;
     await tailor(await loadProfile(opts.profile), await readFile(opts.job, 'utf8'), opts.output, {
       target: opts.target, structured: opts.job.toLowerCase().endsWith('.json'), pdf: opts.pdf, model, templateDirectory: opts.templates,
     });
